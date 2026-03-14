@@ -21,6 +21,7 @@ src/main/java/com/votingsystem/
 ├── model/        → Blockchain core (Block, Blockchain)
 ├── security/     → SHA-256 hashing utilities
 ├── storage/      → File persistence layer
+├── integration/  → External blockchain connectivity (GetBlock JSON-RPC)
 └── Main.java     → Application entry point
 ```
 
@@ -38,6 +39,7 @@ src/main/java/com/votingsystem/
 - ✅ View live election results
 - ✅ Validate blockchain integrity
 - ✅ Detect tampering attempts
+- ✅ Test live connection to external blockchain node (GetBlock)
 
 ### Blockchain & Security
 - ✅ Each vote stored as a block
@@ -45,6 +47,7 @@ src/main/java/com/votingsystem/
 - ✅ Genesis block implementation
 - ✅ Chain validation (previous hash linking)
 - ✅ Tamper detection mechanism
+- ✅ External node connectivity check using Ethereum JSON-RPC (`eth_blockNumber`) via GetBlock
 
 ## 🛠️ Technology Stack
 
@@ -52,6 +55,7 @@ src/main/java/com/votingsystem/
 - **JavaFX** (UI Framework)
 - **SHA-256** (Cryptographic Hashing)
 - **File I/O** (Persistence)
+- **HTTP + JSON-RPC** (External node integration via GetBlock)
 
 ## 📦 Project Structure
 
@@ -82,6 +86,8 @@ MPJ/
 │   │   │           │   └── HashUtil.java
 │   │   │           ├── storage/         # File Handling
 │   │   │           │   └── FileStorage.java
+│   │   │           ├── integration/     # External Blockchain Integration
+│   │   │           │   └── GetBlockClient.java
 │   │   │           └── Main.java
 │   │   └── resources/
 │   │       └── css/
@@ -93,19 +99,27 @@ MPJ/
 
 ### Prerequisites
 - Java JDK 11 or higher
-- JavaFX SDK (included in JDK 11+)
+- JavaFX SDK (JDK 11+ does NOT always include JavaFX; on many systems you must install JavaFX separately)
 
 ### Running the Application
 
-1. **Compile the project:**
+1. **Compile the project (with JavaFX SDK):**
    ```bash
    cd /Users/kunaltailor/Desktop/Kunal/MPJ
-   javac -d out --module-path /path/to/javafx/lib --add-modules javafx.controls,javafx.fxml src/main/java/com/votingsystem/**/*.java
+   javac -d out \
+     --module-path /path/to/javafx/lib \
+     --add-modules javafx.controls,javafx.fxml \
+     -cp src/main/resources \
+     src/main/java/com/votingsystem/**/*.java
    ```
 
-2. **Run the application:**
+2. **Run the application (with JavaFX SDK):**
    ```bash
-   java --module-path /path/to/javafx/lib --add-modules javafx.controls,javafx.fxml -cp out com.votingsystem.Main
+   java \
+     --module-path /path/to/javafx/lib \
+     --add-modules javafx.controls,javafx.fxml \
+     -cp out:src/main/resources \
+     com.votingsystem.Main
    ```
 
    **For macOS/Linux (if JavaFX is in JDK):**
@@ -196,7 +210,31 @@ The system validates:
 5. **Vote Confirmation** - Confirm successful vote
 6. **Results Display** - View election results
 7. **Admin Login** - Authenticate admin
-8. **Admin Dashboard** - View results, validate blockchain, detect tampering
+8. **Admin Dashboard** - View results (charts), blockchain timeline, validate chain, detect tampering, test GetBlock connection
+
+## 🌐 GetBlock Integration (External Blockchain Connectivity)
+
+This project includes a lightweight integration with **GetBlock** to demonstrate live blockchain connectivity.
+
+### What it does
+- The Admin Dashboard includes a button: **“🌐 Test GetBlock Connection”**
+- When clicked, the system calls Ethereum JSON-RPC method `eth_blockNumber` via your configured GetBlock endpoint.
+- It displays the latest on-chain block number in a popup.
+
+### Where it is implemented
+- **Client**: `src/main/java/com/votingsystem/integration/GetBlockClient.java`
+- **Service**: `src/main/java/com/votingsystem/service/AdminService.java`
+- **UI Button**: `src/main/java/com/votingsystem/ui/AdminDashboardScreen.java`
+
+### How to test (demo steps)
+1. Run the application
+2. Login as Admin (`admin` / `admin123`)
+3. Click **“🌐 Test GetBlock Connection”**
+4. You should see a popup showing the latest block number from the external blockchain node
+
+### Note
+- The endpoint must be an **Ethereum-compatible HTTP JSON-RPC** endpoint. The code calls `eth_blockNumber`.
+- Treat your GetBlock URL as sensitive (don’t publish it publicly).
 
 ## 🔍 Viva Questions & Answers
 
