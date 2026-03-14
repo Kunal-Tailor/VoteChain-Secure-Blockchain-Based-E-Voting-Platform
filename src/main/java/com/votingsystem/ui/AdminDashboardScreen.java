@@ -5,9 +5,18 @@ import com.votingsystem.service.AdminService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.chart.*;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
@@ -180,7 +189,12 @@ public class AdminDashboardScreen {
                 primaryStage.setScene(new HomeScreen(primaryStage).getScene())
         );
 
-        HBox bottomButtons = new HBox(20, refreshBtn, logoutBtn);
+        // GetBlock test button
+        Button getBlockBtn = new Button("🌐 Test GetBlock Connection");
+        getBlockBtn.getStyleClass().add("secondary-button");
+        getBlockBtn.setOnAction(e -> testGetBlockConnection());
+
+        HBox bottomButtons = new HBox(20, refreshBtn, getBlockBtn, logoutBtn);
         bottomButtons.setAlignment(Pos.CENTER);
         bottomButtons.setPadding(new Insets(20));
 
@@ -203,5 +217,40 @@ public class AdminDashboardScreen {
 
     public Scene getScene() {
         return scene;
+    }
+
+    /**
+     * Tests connectivity to the external blockchain node via GetBlock
+     * and shows the latest block number in an alert dialog.
+     */
+    private void testGetBlockConnection() {
+        try {
+            long latestBlock = adminService.getGetBlockLatestBlock();
+            boolean reachable = latestBlock >= 0;
+
+            Alert alert = new Alert(
+                    reachable ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR
+            );
+            alert.setTitle("GetBlock Connection Test");
+            alert.setHeaderText(
+                    reachable
+                            ? "Connected to external blockchain node via GetBlock"
+                            : "Unable to read latest block from GetBlock"
+            );
+
+            String message = reachable
+                    ? "Latest on-chain block number: " + latestBlock
+                    : "The GetBlock endpoint could not be reached or returned an invalid response.";
+
+            alert.setContentText(message);
+            alert.showAndWait();
+
+        } catch (Exception ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("GetBlock Connection Test");
+            alert.setHeaderText("Error while contacting GetBlock endpoint");
+            alert.setContentText("Details: " + ex.getMessage());
+            alert.showAndWait();
+        }
     }
 }

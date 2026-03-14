@@ -1,13 +1,16 @@
 package com.votingsystem.service;
 
+import com.votingsystem.integration.GetBlockClient;
 import com.votingsystem.model.Block;
+
 import java.util.List;
 import java.util.Map;
 
 /**
  * Service layer for admin operations
  * Handles admin authentication, blockchain validation,
- * result retrieval, and tamper detection.
+ * result retrieval, tamper detection, and external
+ * blockchain (GetBlock) connectivity checks.
  */
 public class AdminService {
 
@@ -15,10 +18,16 @@ public class AdminService {
     private static final String ADMIN_USERNAME = "admin";
     private static final String ADMIN_PASSWORD = "admin123";
 
+    // Replace with your actual GetBlock endpoint (keep this private in real apps)
+    private static final String GETBLOCK_RPC_URL =
+            "https://go.getblock.io/b16ee0001dec43289807ff911e7bbccc";
+
     private final BlockchainService blockchainService;
+    private final GetBlockClient getBlockClient;
 
     public AdminService(BlockchainService blockchainService) {
         this.blockchainService = blockchainService;
+        this.getBlockClient = new GetBlockClient(GETBLOCK_RPC_URL);
     }
 
     /**
@@ -78,4 +87,22 @@ public class AdminService {
     public String getBlockchainHealthStatus() {
         return validateBlockchain() ? "SECURE" : "TAMPERED";
     }
+
+    // ===== GetBlock (external node) integration =====
+
+    /**
+     * Quick reachability check for the configured GetBlock node.
+     */
+    public boolean isGetBlockReachable() {
+        return getBlockClient.isReachable();
+    }
+
+    /**
+     * Returns the latest block number reported by the GetBlock node,
+     * or -1 if unavailable.
+     */
+    public long getGetBlockLatestBlock() throws Exception {
+        return getBlockClient.getLatestBlockNumber();
+    }
 }
+
