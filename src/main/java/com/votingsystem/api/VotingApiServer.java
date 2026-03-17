@@ -4,7 +4,6 @@ import com.votingsystem.model.Block;
 import com.votingsystem.service.AdminService;
 import com.votingsystem.service.BlockchainService;
 import com.votingsystem.service.VoterService;
-import com.votingsystem.storage.FileStorage;
 import org.bson.Document;
 
 import static spark.Spark.*;
@@ -13,25 +12,35 @@ import java.util.Map;
 
 public class VotingApiServer {
 
-    private static BlockchainService blockchainService;
-    private static VoterService      voterService;
-    private static AdminService      adminService;
-    private static MongoVoterService mongoVoterService;
+    private static BlockchainService      blockchainService;
+    private static VoterService           voterService;
+    private static AdminService           adminService;
+    private static MongoVoterService      mongoVoterService;
+    private static BlockchainMongoService blockchainMongoService;
 
-    // ── PASTE YOUR MONGODB URI HERE ────────────────────────────────────────
-    private static final String MONGO_URI = "mongodb+srv://kunaltailor5555_db_user:T69jfdh47D0lr3Ws@cluster0.hhhinv6.mongodb.net/?appName=Cluster0";
+    private static final String MONGO_URI =
+        "mongodb+srv://kunaltailor5555_db_user:T69jfdh47D0lr3Ws@cluster0.hhhinv6.mongodb.net/?appName=Cluster0";
 
     public static void startServer() {
 
-        // ── Start Java blockchain services (same as before) ─────────────────
-        blockchainService = new BlockchainService();
-        voterService      = new VoterService(blockchainService);
-        adminService      = new AdminService(blockchainService);
+        blockchainService      = new BlockchainService();
+        voterService           = new VoterService(blockchainService);
+        adminService           = new AdminService(blockchainService);
+        mongoVoterService      = new MongoVoterService(MONGO_URI);
+        blockchainMongoService = new BlockchainMongoService(MONGO_URI);
 
-        // ── Connect to MongoDB for voter authentication ──────────────────────
-        mongoVoterService = new MongoVoterService(MONGO_URI);
+        // Sync all existing blocks from blockchain.dat → MongoDB on startup
+        List<Block> existing = adminService.getAllBlocks();
+        for (Block b : existing) {
+            blockchainMongoService.saveBlock(
+                b.getIndex(), b.getVoterId(), b.getCandidateName(),
+                b.getTimestamp(), b.getPreviousHash(), b.getCurrentHash(),
+                b.getNonce(), b.getMiningTime()
+            );
+        }
+        System.out.println("✅ Blockchain synced to MongoDB (" + existing.size() + " blocks)");
 
-        // ── CORS ─────────────────────────────────────────────────────────────
+        // ── CORS ─────────────────────────────────────────────────────────
         before((req, res) -> {
             res.header("Access-Control-Allow-Origin",  "*");
             res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -43,13 +52,9 @@ public class VotingApiServer {
             }
         });
 
-        // ════════════════════════════════════════════════════════════════════
-        //  VOTER LOGIN — now checks MongoDB
-        // ════════════════════════════════════════════════════════════════════
-
-        // POST /api/voter/login
-        // 1. Checks voterId + password against MongoDB voters collection
-        // 2. Also checks blockchain hasVoted status
+        // ════════════════════════════════════════════════════════════════
+        //  VOTER LOGIN — checks MongoDB (BCrypt)
+        // ════════════════════════════════════════════════════════════════
         post("/api/voter/login", (req, res) -> {
             try {
                 Map<String, String> body = JsonUtil.parseMap(req.body());
@@ -61,24 +66,17 @@ public class VotingApiServer {
                     return JsonUtil.error("Voter ID and password are required");
                 }
 
-                // ← checks MongoDB Atlas voters collection
                 Document voter = mongoVoterService.authenticate(voterId, password);
                 if (voter == null) {
                     res.status(401);
                     return JsonUtil.error("Invalid Voter ID or Password");
                 }
 
-                // Get name from MongoDB
-                String name = voter.getString("name");
-
-                // Check hasVoted from MongoDB
-                boolean hasVoted = mongoVoterService.hasVoted(voterId);
-
                 return JsonUtil.obj(
                     "success",  true,
                     "voterId",  voterId,
-                    "name",     name,
-                    "hasVoted", hasVoted
+                    "name",     voter.getString("name"),
+                    "hasVoted", mongoVoterService.hasVoted(voterId)
                 );
             } catch (Exception e) {
                 res.status(500);
@@ -86,15 +84,9 @@ public class VotingApiServer {
             }
         });
 
-        // ════════════════════════════════════════════════════════════════════
-        //  CAST VOTE — mines block in Java + marks voted in MongoDB
-        // ════════════════════════════════════════════════════════════════════
-
-        // POST /api/voter/cast-vote
-        // 1. Checks MongoDB hasVoted (double vote prevention)
-        // 2. Calls Java BlockchainService to mine block (SHA-256 PoW + RSA)
-        // 3. Marks voter as voted in MongoDB
-        // 4. Saves block to blockchain.dat via FileStorage
+        // ════════════════════════════════════════════════════════════════
+        //  CAST VOTE — mines block in Java + saves to MongoDB
+        // ════════════════════════════════════════════════════════════════
         post("/api/voter/cast-vote", (req, res) -> {
             try {
                 Map<String, String> body = JsonUtil.parseMap(req.body());
@@ -106,13 +98,12 @@ public class VotingApiServer {
                     return JsonUtil.error("voterId and candidateName are required");
                 }
 
-                // Double vote check in MongoDB
                 if (mongoVoterService.hasVoted(voterId)) {
                     res.status(400);
                     return JsonUtil.error("You have already cast your vote");
                 }
 
-                // Mine the block using your Java blockchain
+                // Mine block in Java → saves to blockchain.dat
                 boolean ok = voterService.castVote(voterId, candidateName);
                 if (!ok) {
                     res.status(400);
@@ -122,9 +113,16 @@ public class VotingApiServer {
                 // Mark voted in MongoDB
                 mongoVoterService.markVoted(voterId);
 
-                // Return block details
+                // Get the newly mined block
                 List<Block> chain  = adminService.getAllBlocks();
                 Block       latest = chain.get(chain.size() - 1);
+
+                // Save new block to MongoDB so any device can see it
+                blockchainMongoService.saveBlock(
+                    latest.getIndex(), latest.getVoterId(), latest.getCandidateName(),
+                    latest.getTimestamp(), latest.getPreviousHash(), latest.getCurrentHash(),
+                    latest.getNonce(), latest.getMiningTime()
+                );
 
                 return JsonUtil.obj(
                     "success",      true,
@@ -141,8 +139,7 @@ public class VotingApiServer {
             }
         });
 
-        // GET /api/voter/status?voterId=V001
-        // Checks MongoDB for voter status
+        // GET /api/voter/status
         get("/api/voter/status", (req, res) -> {
             String voterId = req.queryParams("voterId");
             if (voterId == null || voterId.isEmpty()) {
@@ -153,14 +150,12 @@ public class VotingApiServer {
             return JsonUtil.obj("voterId", voterId.toUpperCase(), "hasVoted", hasVoted);
         });
 
-        // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════
         //  RESULTS (public)
-        // ════════════════════════════════════════════════════════════════════
-
+        // ════════════════════════════════════════════════════════════════
         get("/api/results", (req, res) -> {
             Map<String, Integer> results = voterService.getElectionResults();
             int total = voterService.getTotalVotes();
-
             StringBuilder sb = new StringBuilder();
             sb.append("{\"totalVotes\":").append(total).append(",\"results\":{");
             boolean first = true;
@@ -169,20 +164,18 @@ public class VotingApiServer {
                 sb.append("\"").append(e.getKey()).append("\":").append(e.getValue());
                 first = false;
             }
-            sb.append("}}");
-            return sb.toString();
+            return sb.append("}}").toString();
         });
 
-        // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════
         //  ADMIN ENDPOINTS
-        // ════════════════════════════════════════════════════════════════════
-
+        // ════════════════════════════════════════════════════════════════
         post("/api/admin/login", (req, res) -> {
             try {
                 Map<String, String> body = JsonUtil.parseMap(req.body());
-                String username = body.getOrDefault("username", "");
-                String password = body.getOrDefault("password", "");
-                if (!adminService.authenticateAdmin(username, password)) {
+                if (!adminService.authenticateAdmin(
+                        body.getOrDefault("username", ""),
+                        body.getOrDefault("password", ""))) {
                     res.status(401);
                     return JsonUtil.error("Invalid admin credentials");
                 }
@@ -193,16 +186,15 @@ public class VotingApiServer {
             }
         });
 
+        // GET /api/admin/blockchain — from blockchain.dat via Java
         get("/api/admin/blockchain", (req, res) -> {
             try {
                 boolean     isValid = adminService.validateBlockchain();
                 List<Block> blocks  = adminService.getAllBlocks();
-
                 StringBuilder sb = new StringBuilder();
                 sb.append("{\"isValid\":").append(isValid)
                   .append(",\"totalBlocks\":").append(blocks.size())
                   .append(",\"blocks\":[");
-
                 for (int i = 0; i < blocks.size(); i++) {
                     Block b = blocks.get(i);
                     if (i > 0) sb.append(",");
@@ -217,15 +209,14 @@ public class VotingApiServer {
                       .append("\"miningTime\":").append(b.getMiningTime())
                       .append("}");
                 }
-                sb.append("]}");
-                return sb.toString();
+                return sb.append("]}").toString();
             } catch (Exception e) {
                 res.status(500);
                 return JsonUtil.error(e.getMessage());
             }
         });
 
-        // GET /api/admin/voters — now reads from MongoDB
+        // GET /api/admin/voters — from MongoDB
         get("/api/admin/voters", (req, res) -> {
             try {
                 List<Document> voters = mongoVoterService.getAllVoters();
@@ -242,28 +233,24 @@ public class VotingApiServer {
                       .append("}");
                     first = false;
                 }
-                sb.append("]}");
-                return sb.toString();
+                return sb.append("]}").toString();
             } catch (Exception e) {
                 res.status(500);
                 return JsonUtil.error(e.getMessage());
             }
         });
 
-        // POST /api/admin/register-voter — saves to MongoDB
+        // POST /api/admin/register-voter
         post("/api/admin/register-voter", (req, res) -> {
             try {
                 Map<String, String> body = JsonUtil.parseMap(req.body());
                 String voterId  = body.getOrDefault("voterId",  "").trim().toUpperCase();
                 String name     = body.getOrDefault("name",     "").trim();
                 String password = body.getOrDefault("password", "").trim();
-
                 if (voterId.isEmpty() || password.isEmpty()) {
                     res.status(400);
                     return JsonUtil.error("voterId and password are required");
                 }
-
-                // saves to MongoDB
                 boolean ok = mongoVoterService.registerVoter(voterId, name, password);
                 if (!ok) {
                     res.status(400);
@@ -276,18 +263,65 @@ public class VotingApiServer {
             }
         });
 
+        // GET /api/admin/getblock
         get("/api/admin/getblock", (req, res) -> {
             try {
-                long    blockNum  = adminService.getGetBlockLatestBlock();
-                boolean reachable = blockNum >= 0;
-                return JsonUtil.obj("reachable", reachable, "blockNumber", blockNum);
+                long blockNum = adminService.getGetBlockLatestBlock();
+                return JsonUtil.obj("reachable", blockNum >= 0, "blockNumber", blockNum);
             } catch (Exception e) {
                 return JsonUtil.obj("reachable", false, "blockNumber", -1);
             }
         });
 
+        // ════════════════════════════════════════════════════════════════
+        //  MONGODB BLOCKCHAIN ENDPOINTS
+        //  Works from any device — reads/validates from MongoDB Atlas
+        // ════════════════════════════════════════════════════════════════
+
+        // GET /api/admin/mongo-blockchain
+        // Returns all blocks stored in MongoDB — accessible from ANY device
+        get("/api/admin/mongo-blockchain", (req, res) -> {
+            try {
+                List<Document> mongoBlocks = blockchainMongoService.getAllBlocks();
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"blocks\":[");
+                for (int i = 0; i < mongoBlocks.size(); i++) {
+                    Document b = mongoBlocks.get(i);
+                    if (i > 0) sb.append(",");
+                    sb.append("{")
+                      .append("\"index\":").append(b.getInteger("index")).append(",")
+                      .append("\"voterId\":\"").append(esc(b.getString("voterId"))).append("\",")
+                      .append("\"candidateName\":\"").append(esc(b.getString("candidateName"))).append("\",")
+                      .append("\"timestamp\":\"").append(esc(b.getString("timestamp"))).append("\",")
+                      .append("\"previousHash\":\"").append(esc(b.getString("previousHash"))).append("\",")
+                      .append("\"currentHash\":\"").append(esc(b.getString("currentHash"))).append("\",")
+                      .append("\"nonce\":").append(b.getInteger("nonce")).append(",")
+                      .append("\"miningTime\":").append(b.getLong("miningTime"))
+                      .append("}");
+                }
+                return sb.append("]}").toString();
+            } catch (Exception e) {
+                res.status(500);
+                return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // GET /api/admin/validate-mongo
+        // Validates hash links between all blocks stored in MongoDB
+        // Check: Block N's previousHash == Block N-1's currentHash
+        get("/api/admin/validate-mongo", (req, res) -> {
+            try {
+                BlockchainMongoService.ValidationResult result =
+                    blockchainMongoService.validateChain();
+                return result.toJson();
+            } catch (Exception e) {
+                res.status(500);
+                return JsonUtil.error(e.getMessage());
+            }
+        });
+
         System.out.println("✅ Voting API Server started on http://localhost:4567");
-        System.out.println("   Open index.html in your browser to use the web UI.");
+        System.out.println("   Open voting_index.html in your browser.");
     }
 
     private static String esc(String s) {

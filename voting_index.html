@@ -999,6 +999,21 @@
         font-size: 2rem
       }
     }
+
+    /* ── VALIDATE TAB STYLES ── */
+    .val-block { background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px }
+    .val-block.valid   { border-color:rgba(0,230,118,0.3) }
+    .val-block.invalid { border-color:rgba(255,82,82,0.3);background:rgba(255,82,82,0.04) }
+    .val-title { font-weight:600;font-size:.88rem;margin-bottom:10px;display:flex;align-items:center;gap:8px }
+    .val-check { display:flex;justify-content:space-between;align-items:center;font-size:.76rem;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04) }
+    .val-check:last-of-type { border:none }
+    .val-lbl { color:var(--muted) }
+    .val-pass { color:#00e676;font-weight:700 }
+    .val-fail { color:#ff5252;font-weight:700 }
+    .val-hash { font-family:'JetBrains Mono',monospace;font-size:.62rem;word-break:break-all;margin-top:8px;padding:7px 10px;border-radius:6px;background:rgba(0,0,0,0.3) }
+    .hash-match   { color:rgba(0,230,118,0.8) }
+    .hash-nomatch { color:rgba(255,82,82,0.8) }
+    .val-arrow { text-align:center;font-size:1.1rem;color:var(--saffron);padding:3px 0 }
   </style>
 </head>
 
@@ -1257,6 +1272,7 @@
         <button class="admin-tab" onclick="switchTab('blockchain',this)">⛓️ Blockchain</button>
         <button class="admin-tab" onclick="switchTab('voters',this)">👥 Voters</button>
         <button class="admin-tab" onclick="switchTab('register',this)">➕ Register</button>
+        <button class="admin-tab" onclick="switchTab('validate',this)">🔗 Validate</button>
       </div>
       <!-- Overview -->
       <div class="tab-panel active" id="tab-overview">
@@ -1285,7 +1301,7 @@
                 <th>Voter ID</th>
                 <th>Name</th>
                 <th>Status</th>
-      
+                <th>Voted For</th>
               </tr>
             </thead>
             <tbody id="voter-tbody"></tbody>
@@ -1294,7 +1310,7 @@
       </div>
       <!-- Register -->
       <div class="tab-panel" id="tab-register">
-        <div class="section-label" style="margin-bottom:14px">Register New Voter — saves to voters.dat via Java</div>
+        <div class="section-label" style="margin-bottom:14px">Register New Voter — saves to MongoDB Atlas with BCrypt hashed password</div>
         <div class="reg-box">
           <div class="alert alert-error" id="reg-err"></div>
           <div class="alert alert-success" id="reg-ok"></div>
@@ -1313,6 +1329,20 @@
           <button class="btn btn-primary btn-inline" onclick="registerVoter()"
             style="width:auto;padding:12px 28px">Register Voter</button>
         </div>
+      </div>
+      <!-- NEW: Validate Tab — MongoDB hash link verification -->
+      <div class="tab-panel" id="tab-validate">
+        <div class="section-label" style="margin-bottom:14px">MongoDB Chain Validation — verifies hash links between all blocks</div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:18px;line-height:1.7">
+          Reads blockchain from <strong style="color:var(--saffron)">MongoDB Atlas</strong> — works from any device.<br/>
+          Checks each block's <code style="color:var(--saffron);font-size:.8rem">previousHash</code> matches the previous block's <code style="color:var(--saffron);font-size:.8rem">currentHash</code>.
+        </p>
+        <div style="display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-inline" onclick="validateMongoChain()" style="padding:11px 24px">🔍 Validate Chain Now</button>
+          <button class="btn btn-secondary btn-inline" onclick="loadMongoChain()" style="padding:11px 24px">🌐 Load from MongoDB</button>
+        </div>
+        <div id="mongo-result-badge" style="margin-bottom:18px"></div>
+        <div id="mongo-validation-list"></div>
       </div>
     </div>
   </div>
@@ -1678,7 +1708,7 @@ function startConfirmCountdown() {
   <td><strong style="color:var(--saffron)">${v.voterId}</strong></td>
   <td style="color:var(--text)">${v.name || '—'}</td>
   <td><span class="voted-chip ${v.hasVoted ? 'chip-yes' : 'chip-no'}">${v.hasVoted ? '✅ Voted' : '⏳ Pending'}</span></td>
-
+  <td style="color:var(--muted);font-size:.78rem">${v.votedFor || '—'}</td>
 </tr>`).join('');
 
       } catch (e) {
@@ -1729,8 +1759,6 @@ function startConfirmCountdown() {
     async function testGetBlock() {
       showOverlay('Testing GetBlock connection via Java...');
       try {
-        // → GET /api/admin/getblock → AdminService.getGetBlockLatestBlock()
-        //   → GetBlockClient.getLatestBlockNumber()  (eth_blockNumber RPC)
         const data = await api('GET', '/api/admin/getblock');
         hideOverlay();
         if (data.reachable) {
@@ -1742,6 +1770,91 @@ function startConfirmCountdown() {
         hideOverlay();
         alert('GetBlock test error: ' + e.message);
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MONGODB CHAIN VALIDATION
+    //  Reads blocks from MongoDB, checks hash links between each block
+    //  Works from ANY device connected to same MongoDB Atlas
+    // ═══════════════════════════════════════════════════════════════
+    async function validateMongoChain() {
+      showOverlay('Validating blockchain in MongoDB...\nChecking hash links between all blocks');
+      try {
+        const data = await api('GET', '/api/admin/validate-mongo');
+        const badge = document.getElementById('mongo-result-badge');
+        badge.innerHTML = `
+          <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:10px;
+            background:${data.isValid ? 'rgba(0,230,118,0.1)' : 'rgba(255,82,82,0.1)'};
+            border:1px solid ${data.isValid ? 'rgba(0,230,118,0.3)' : 'rgba(255,82,82,0.3)'};
+            color:${data.isValid ? '#00e676' : '#ff5252'};font-weight:700;font-size:.9rem">
+            ${data.isValid ? '✅ Chain VALID — all blocks properly linked' : '❌ Chain TAMPERED — hash mismatch detected'}
+            <span style="font-weight:400;font-size:.75rem;opacity:.7">${data.totalBlocks} blocks checked</span>
+          </div>`;
+
+        const list = document.getElementById('mongo-validation-list');
+        if (!data.blockValidations || data.blockValidations.length === 0) {
+          list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:12px 0">Only genesis block — no votes to validate yet.</div>';
+          return;
+        }
+
+        list.innerHTML = data.blockValidations.map((bv, i) => `
+          <div class="val-block ${bv.blockValid ? 'valid' : 'invalid'}">
+            <div class="val-title">
+              <span>${bv.blockValid ? '✅' : '❌'} Block #${bv.index}</span>
+              <span style="font-size:.72rem;color:var(--muted);font-weight:400">${bv.blockValid ? 'All 3 checks passed' : 'FAILED'}</span>
+            </div>
+            <div class="val-check">
+              <span class="val-lbl">🔗 Hash link — prevHash matches previous block</span>
+              <span class="${bv.linkValid ? 'val-pass' : 'val-fail'}">${bv.linkValid ? '✅ MATCH' : '❌ MISMATCH'}</span>
+            </div>
+            <div class="val-check">
+              <span class="val-lbl">⛏️ Proof of Work — starts with "000"</span>
+              <span class="${bv.difficultyValid ? 'val-pass' : 'val-fail'}">${bv.difficultyValid ? '✅ VALID' : '❌ INVALID'}</span>
+            </div>
+            <div class="val-check">
+              <span class="val-lbl">🔑 SHA-256 integrity — recomputed matches stored</span>
+              <span class="${bv.hashValid ? 'val-pass' : 'val-fail'}">${bv.hashValid ? '✅ VALID' : '❌ TAMPERED'}</span>
+            </div>
+            <div class="val-hash hash-match">🔗 Prev block hash:&nbsp; ${bv.prevBlockHash}</div>
+            <div style="text-align:center;padding:3px 0;font-size:.8rem;color:${bv.linkValid ? '#00e676' : '#ff5252'}">
+              ${bv.linkValid ? '✅ matches ↓' : '❌ does NOT match ↓'}
+            </div>
+            <div class="val-hash ${bv.linkValid ? 'hash-match' : 'hash-nomatch'}">🔑 This block prevHash: ${bv.previousHash}</div>
+          </div>
+          ${i < data.blockValidations.length - 1 ? '<div class="val-arrow">⬇</div>' : ''}
+        `).join('');
+      } catch(e) { alert('Validation error: ' + e.message); }
+      finally { hideOverlay(); }
+    }
+
+    async function loadMongoChain() {
+      showOverlay('Loading blockchain from MongoDB Atlas...');
+      try {
+        const data = await api('GET', '/api/admin/mongo-blockchain');
+        document.getElementById('mongo-result-badge').innerHTML =
+          `<div style="color:var(--muted);font-size:.82rem;margin-bottom:12px">
+            📦 ${data.blocks.length} blocks loaded from MongoDB Atlas — accessible from any device
+          </div>`;
+        document.getElementById('mongo-validation-list').innerHTML =
+          data.blocks.map((b, i) => `
+            <div class="val-block valid">
+              <div class="val-title">
+                ${b.index === 0 ? '🌱 Genesis Block' : `Block #${b.index}`}
+                <span style="font-size:.68rem;color:var(--muted);font-weight:400">${b.timestamp}</span>
+              </div>
+              ${b.index > 0 ? `
+                <div class="val-check"><span class="val-lbl">Voter ID</span><span style="color:var(--text)">ANONYMOUS</span></div>
+                <div class="val-check"><span class="val-lbl">Candidate</span><span style="color:var(--saffron)">${b.candidateName}</span></div>
+                <div class="val-check"><span class="val-lbl">Nonce</span><span>${b.nonce}</span></div>
+                <div class="val-check"><span class="val-lbl">Mining Time</span><span>${b.miningTime} ms</span></div>
+              ` : ''}
+              <div class="val-hash hash-match">🔑 ${b.currentHash}</div>
+              ${b.index > 0 ? `<div class="val-hash" style="color:rgba(19,136,8,0.7)">🔗 ${b.previousHash}</div>` : ''}
+            </div>
+            ${i < data.blocks.length - 1 ? '<div class="val-arrow">⬇</div>' : ''}
+          `).join('');
+      } catch(e) { alert('Error loading from MongoDB: ' + e.message); }
+      finally { hideOverlay(); }
     }
   </script>
 </body>
