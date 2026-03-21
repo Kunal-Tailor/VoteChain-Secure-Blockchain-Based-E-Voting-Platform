@@ -1352,7 +1352,8 @@
     //  CONFIG — points to your Java REST API server
     //  http://localhost:4567
     // ═══════════════════════════════════════════════════════════════
-    const API = 'https://votechain-secure-blockchain-based-e-x273.onrender.com'; // Spark Java runs here
+    // const API = 'https://votechain-secure-blockchain-based-e-x273.onrender.com'; // Spark Java runs here
+    const API='http://localhost:4567'; // for local testing with Spark Java server
 
     // ═══════════════════════════════════════════════════════════════
     //  API HELPER — all calls go to Java backend
@@ -1660,23 +1661,81 @@ function startConfirmCountdown() {
         const vals = entries.map(([, v]) => v);
         const colors = COLORS.slice(0, labels.length);
         if (adminPieInst) adminPieInst.destroy();
-        if (adminBarInst) adminBarInst.destroy();
-        Chart.defaults.color = 'rgba(238,238,245,0.5)';
-        adminPieInst = new Chart(document.getElementById('adminPie').getContext('2d'), {
-          type: 'doughnut',
-          data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderColor: 'rgba(7,7,15,0.8)', borderWidth: 3 }] },
-          options: { plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } } }, cutout: '55%' }
-        });
-        adminBarInst = new Chart(document.getElementById('adminBar').getContext('2d'), {
-          type: 'bar',
-          data: { labels, datasets: [{ label: 'Votes', data: vals, backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
-          options: {
-            plugins: { legend: { display: false } }, scales: {
-              x: { grid: { color: 'rgba(255,255,255,0.05)' } },
-              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { stepSize: 1 } }
-            }
-          }
-        });
+if (adminBarInst) adminBarInst.destroy();
+Chart.defaults.color = 'rgba(238,238,245,0.6)';
+
+if (entries.length === 0) {
+  // No votes yet — show placeholder message
+  document.querySelector('#tab-overview .charts-grid').innerHTML = `
+    <div class="chart-box" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;gap:10px">
+      <span style="font-size:2.5rem">🗳️</span>
+      <div style="color:var(--saffron);font-weight:600;font-size:.9rem">No Votes Cast Yet</div>
+      <div style="color:var(--muted);font-size:.78rem">Charts will appear after first vote</div>
+    </div>
+    <div class="chart-box" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;gap:10px">
+      <span style="font-size:2.5rem">📊</span>
+      <div style="color:var(--saffron);font-weight:600;font-size:.9rem">No Data Available</div>
+      <div style="color:var(--muted);font-size:.78rem">Cast votes to see comparison</div>
+    </div>`;
+} else {
+  // Restore canvas elements if they were replaced
+  const grid = document.querySelector('#tab-overview .charts-grid');
+  if (!document.getElementById('adminPie')) {
+    grid.innerHTML = `
+      <div class="chart-box"><div class="chart-title">Vote Distribution</div><canvas id="adminPie" height="220"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Vote Comparison</div><canvas id="adminBar" height="220"></canvas></div>`;
+  }
+
+  adminPieInst = new Chart(document.getElementById('adminPie').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        backgroundColor: colors,
+        borderColor: 'rgba(7,7,15,0.8)',
+        borderWidth: 3
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { padding: 12, font: { size: 11 }, color: 'rgba(238,238,245,0.7)' }
+        }
+      },
+      cutout: '55%'
+    }
+  });
+
+  adminBarInst = new Chart(document.getElementById('adminBar').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Votes',
+        data: vals,
+        backgroundColor: colors,
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          ticks: { color: 'rgba(238,238,245,0.6)', font: { size: 11 } }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          ticks: { color: 'rgba(238,238,245,0.6)', stepSize: 1 }
+        }
+      }
+    }
+  });
+}
 
         // Blockchain Timeline — mirrors AdminDashboardScreen.java timeline
         document.getElementById('chain-timeline').innerHTML =
