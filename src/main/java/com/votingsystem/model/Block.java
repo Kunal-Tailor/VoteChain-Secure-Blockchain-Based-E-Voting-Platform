@@ -42,9 +42,13 @@ public class Block implements Serializable {
         this.voterId = "SYSTEM";
         this.candidateName = "GENESIS";
         this.previousHash = "0";
+        this.nonce = 0;
 
-        this.timestamp = LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        // ⚠️ FIXED: hardcoded timestamp so genesis hash is ALWAYS the same.
+        // If you use LocalDateTime.now() here, every restart produces a new
+        // genesis hash, which breaks the previousHash link for Block #1 stored
+        // in MongoDB → "TAMPERED" even on a fresh chain.
+        this.timestamp = "2024-01-01 00:00:00";
 
         mineBlock();
     }

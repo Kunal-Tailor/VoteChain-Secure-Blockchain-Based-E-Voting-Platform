@@ -29,16 +29,12 @@ public class VotingApiServer {
         mongoVoterService      = new MongoVoterService(MONGO_URI);
         blockchainMongoService = new BlockchainMongoService(MONGO_URI);
 
-        // Sync all existing blocks from blockchain.dat → MongoDB on startup
-        List<Block> existing = adminService.getAllBlocks();
-        for (Block b : existing) {
-            blockchainMongoService.saveBlock(
-                b.getIndex(), b.getVoterId(), b.getCandidateName(),
-                b.getTimestamp(), b.getPreviousHash(), b.getCurrentHash(),
-                b.getNonce(), b.getMiningTime()
-            );
-        }
-        System.out.println("✅ Blockchain synced to MongoDB (" + existing.size() + " blocks)");
+        // ── Sync blockchain.dat → MongoDB on every startup ───────────────
+        // IMPORTANT: We CLEAR MongoDB blocks first, then re-insert from the
+        // local .dat file. This prevents stale genesis blocks in MongoDB from
+        // causing "TAMPERED" errors after a restart or after deleting .dat.
+        blockchainMongoService.clearAndResync(adminService.getAllBlocks());
+        System.out.println("✅ Blockchain re-synced to MongoDB (" + adminService.getAllBlocks().size() + " blocks)");
 
         // ── CORS ─────────────────────────────────────────────────────────
         before((req, res) -> {

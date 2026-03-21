@@ -58,6 +58,25 @@ public class BlockchainMongoService {
         System.out.println("✅ Block #" + index + " saved to MongoDB");
     }
 
+    // ── Clear all blocks then re-insert from the given list ───────────────
+    // Call this on server startup so MongoDB always matches blockchain.dat.
+    // Without this, a deleted/recreated blockchain.dat produces a new genesis
+    // hash while MongoDB still holds the old one → TAMPERED false positive.
+    public void clearAndResync(java.util.List<com.votingsystem.model.Block> chain) {
+        blocks.deleteMany(new Document()); // wipe all existing blocks
+        for (com.votingsystem.model.Block b : chain) {
+            blocks.insertOne(new Document("index",        b.getIndex())
+                    .append("voterId",       b.getVoterId())
+                    .append("candidateName", b.getCandidateName())
+                    .append("timestamp",     b.getTimestamp())
+                    .append("previousHash",  b.getPreviousHash())
+                    .append("currentHash",   b.getCurrentHash())
+                    .append("nonce",         b.getNonce())
+                    .append("miningTime",    b.getMiningTime()));
+        }
+        System.out.println("✅ MongoDB blocks collection cleared and re-synced (" + chain.size() + " blocks)");
+    }
+
     // ── Get all blocks sorted by index ────────────────────────────────────
     public List<Document> getAllBlocks() {
         List<Document> list = new ArrayList<>();
