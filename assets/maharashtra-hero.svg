@@ -1,0 +1,22 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/>
+      <stop offset="1" stop-color="#0E1B33"/>
+    </linearGradient>
+    <linearGradient id="tri" x1="250" y1="90" x2="760" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9933"/>
+      <stop offset="0.5" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#138808"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" rx="32" fill="url(#bg)"/>
+  <circle cx="170" cy="120" r="110" fill="#FF9933" fill-opacity="0.12"/>
+  <circle cx="1080" cy="620" r="180" fill="#138808" fill-opacity="0.12"/>
+  <path d="M250 180L480 120L640 190L760 170L840 290L780 430L620 470L460 550L350 500L270 360L250 180Z" fill="url(#tri)" fill-opacity="0.9"/>
+  <path d="M520 315C520 271.922 554.922 237 598 237C641.078 237 676 271.922 676 315C676 358.078 641.078 393 598 393C554.922 393 520 358.078 520 315Z" fill="#003087"/>
+  <circle cx="598" cy="315" r="52" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+  <path d="M598 263V367M546 315H650M560 279L636 351M636 279L560 351" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+  <text x="130" y="610" fill="#FFFFFF" fill-opacity="0.9" font-size="44" font-family="Arial, sans-serif" font-weight="700">Maharashtra Secure E-Voting</text>
+  <text x="130" y="650" fill="#B7C2DB" font-size="24" font-family="Arial, sans-serif">Vidhan Sabha " Lok Sabha " Constituency Wise Voting</text>
+</svg>

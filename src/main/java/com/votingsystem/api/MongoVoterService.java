@@ -54,15 +54,32 @@ public class MongoVoterService {
 
     // ── Build a voter document with BCrypt hashed password ─────────────────
     private Document makeVoter(String voterId, String name, String plainPassword) {
-        // BCrypt.hashpw() hashes the password with a random salt
-        // cost factor 12 = 2^12 = 4096 iterations (secure but not too slow)
         String hashedPassword = BCrypt.hashpw(plainPassword, BCrypt.gensalt(12));
-
         return new Document("voterId",  voterId.toUpperCase())
                 .append("name",     name)
-                .append("password", hashedPassword)  // never store plain text
-                .append("hasVoted", false);
-                // .append("votedFor", null);
+                .append("password", hashedPassword)
+                .append("district", "")
+                .append("division", "")
+                .append("constituencyVS", "")
+                .append("constituencyLS", "")
+                .append("hasVoted", false)
+                .append("votedElections", new org.bson.Document());
+    }
+
+    // ── Build a voter with full constituency details (Maharashtra) ─────────
+    private Document makeVoterFull(String voterId, String name, String plainPassword,
+                                    String district, String division,
+                                    String constituencyVS, String constituencyLS) {
+        String hashedPassword = BCrypt.hashpw(plainPassword, BCrypt.gensalt(12));
+        return new Document("voterId",  voterId.toUpperCase())
+                .append("name",     name)
+                .append("password", hashedPassword)
+                .append("district", district)
+                .append("division", division)
+                .append("constituencyVS", constituencyVS)
+                .append("constituencyLS", constituencyLS)
+                .append("hasVoted", false)
+                .append("votedElections", new org.bson.Document());
     }
 
     // ── Authenticate voter ─────────────────────────────────────────────────
@@ -108,33 +125,80 @@ public class MongoVoterService {
         voters.updateOne(
                 eq("voterId", voterId.toUpperCase()),
                 new Document("$set", new Document("hasVoted", true))
-                        // .append("votedFor", candidateName))
         );
+    }
+
+    // ── Mark voter as voted for a specific election ───────────────────────
+    public void markVotedForElection(String voterId, String electionId) {
+        voters.updateOne(
+                eq("voterId", voterId.toUpperCase()),
+                new Document("$set", new Document("votedElections." + electionId.replace(".", "_"), true)
+                        .append("hasVoted", true))
+        );
+    }
+
+    // ── Check if voter has voted in a specific election ───────────────────
+    public boolean hasVotedInElection(String voterId, String electionId) {
+        Document doc = voters.find(eq("voterId", voterId.toUpperCase())).first();
+        if (doc == null) return false;
+        Document votedElections = doc.get("votedElections", Document.class);
+        if (votedElections == null) return false;
+        return votedElections.getBoolean(electionId.replace(".", "_"), false);
     }
 
     // ── Register new voter — password is hashed before saving ──────────────
     public boolean registerVoter(String voterId, String name, String plainPassword) {
         if (voterExists(voterId)) return false;
-
-        // Hash the password before inserting into MongoDB
         voters.insertOne(makeVoter(voterId.toUpperCase(), name, plainPassword));
         System.out.println("✅ Voter " + voterId.toUpperCase() + " registered with hashed password");
         return true;
     }
 
+    // ── Register voter with constituency info (Maharashtra) ────────────────
+    public boolean registerVoterWithConstituency(String voterId, String name, String plainPassword,
+                                                  String district, String division,
+                                                  String constituencyVS, String constituencyLS) {
+        if (voterExists(voterId)) return false;
+        voters.insertOne(makeVoterFull(voterId.toUpperCase(), name, plainPassword,
+                district, division, constituencyVS, constituencyLS));
+        System.out.println("✅ Voter " + voterId.toUpperCase() + " registered ("
+                + district + ", " + division + ")");
+        return true;
+    }
+
     // ── Get all voters for admin dashboard ─────────────────────────────────
-    // Note: password field is NOT included in the returned list
     public java.util.List<Document> getAllVoters() {
         java.util.List<Document> list = new java.util.ArrayList<>();
-        // Exclude the password field from results — never expose hashes
         for (Document doc : voters.find()) {
             Document safe = new Document();
             safe.append("voterId",  doc.getString("voterId"));
             safe.append("name",     doc.getString("name"));
+            safe.append("district", doc.getString("district"));
+            safe.append("division", doc.getString("division"));
+            safe.append("constituencyVS", doc.getString("constituencyVS"));
+            safe.append("constituencyLS", doc.getString("constituencyLS"));
             safe.append("hasVoted", doc.getBoolean("hasVoted", false));
-            // safe.append("votedFor", doc.getString("votedFor"));
+            Document votedElections = doc.get("votedElections", Document.class);
+            safe.append("votedElections", votedElections != null ? votedElections : new Document());
             list.add(safe);
         }
         return list;
+    }
+
+    // ── Get voter document (safe, no password) ────────────────────────────
+    public Document getVoterInfo(String voterId) {
+        Document doc = voters.find(eq("voterId", voterId.toUpperCase())).first();
+        if (doc == null) return null;
+        Document safe = new Document();
+        safe.append("voterId",  doc.getString("voterId"));
+        safe.append("name",     doc.getString("name"));
+        safe.append("district", doc.getString("district"));
+        safe.append("division", doc.getString("division"));
+        safe.append("constituencyVS", doc.getString("constituencyVS"));
+        safe.append("constituencyLS", doc.getString("constituencyLS"));
+        safe.append("hasVoted", doc.getBoolean("hasVoted", false));
+        Document votedElections = doc.get("votedElections", Document.class);
+        safe.append("votedElections", votedElections != null ? votedElections : new Document());
+        return safe;
     }
 }
