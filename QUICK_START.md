@@ -12,6 +12,34 @@
 1. Open project in IntelliJ IDEA / Eclipse / VS Code
 2. Run `Main.java`
 
+## 🌐 Running the REST API (for Web UI)
+
+The web interface (`voting_index.html`) connects to the backend API on port `4567`.
+
+1. Set MongoDB Atlas connection string:
+```bash
+export MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>/<db>?retryWrites=true&w=majority"
+```
+
+2. Optional: auto-seed Maharashtra data on first run:
+```bash
+export AUTO_SEED=true
+```
+
+3. Build and run the API server:
+```bash
+mvn -q -DskipTests package
+java -jar target/MPJ-1.0.jar
+```
+
+4. Open `voting_index.html` in your browser and login.
+
+### Run API + Desktop Together
+```bash
+./build.sh
+java -cp out:src/main/resources com.votingsystem.api.ApiMain
+```
+
 ## 👤 Login Credentials
 
 ### Voters

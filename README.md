@@ -132,6 +132,31 @@ MPJ/
    java -cp out com.votingsystem.Main
    ```
 
+### Running the REST API (for Web UI)
+The web interface (`voting_index.html`) talks to the REST API on port `4567`.
+
+1. Set MongoDB Atlas connection string:
+   ```bash
+   export MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>/<db>?retryWrites=true&w=majority"
+   ```
+
+2. Optional: auto-seed Maharashtra data on first run:
+   ```bash
+   export AUTO_SEED=true
+   ```
+
+3. Build and run the API server:
+   ```bash
+   mvn -q -DskipTests package
+   java -jar target/MPJ-1.0.jar
+   ```
+
+### Run API + Desktop Together
+```bash
+./build.sh
+java -cp out:src/main/resources com.votingsystem.api.ApiMain
+```
+
 ### Using an IDE (Recommended)
 
 1. **IntelliJ IDEA / Eclipse:**

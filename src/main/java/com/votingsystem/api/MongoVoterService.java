@@ -7,7 +7,8 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.mindrot.jbcrypt.BCrypt;
 
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
+import java.util.regex.Pattern;
 
 /**
  * MongoVoterService
@@ -40,16 +41,39 @@ public class MongoVoterService {
     // ── Seed default voters if collection is empty ─────────────────────────
     // Passwords are BCrypt hashed before saving — plain text never stored
     private void seedDefaultVoters() {
-        if (voters.countDocuments() == 0) {
-            voters.insertMany(java.util.List.of(
-                    makeVoter("V001", "Aarav Sharma",  "voter1"),
-                    makeVoter("V002", "Priya Singh",   "voter2"),
-                    makeVoter("V003", "Rahul Patel",   "voter3"),
-                    makeVoter("V004", "Ananya Reddy",  "voter4"),
-                    makeVoter("V005", "Vikram Nair",   "voter5")
-            ));
-            System.out.println("✅ Default voters seeded with hashed passwords");
+        // Always ensure demo voters exist with constituency details
+        upsertDemoVoter("V001", "Aarav Sharma",  "voter1", "Pune",           "Pune",   "VS-118", "LS-34");
+        upsertDemoVoter("V002", "Priya Singh",   "voter2", "Pune",           "Pune",   "VS-110", "LS-35");
+        upsertDemoVoter("V003", "Rahul Patel",   "voter3", "Mumbai Suburban","Konkan", "VS-61",  "LS-26");
+        upsertDemoVoter("V004", "Ananya Reddy",  "voter4", "Mumbai City",    "Konkan", "VS-91",  "LS-31");
+        upsertDemoVoter("V005", "Vikram Nair",   "voter5", "Thane",          "Konkan", "VS-57",  "LS-25");
+        System.out.println("✅ Default voters ensured with constituency details");
+    }
+
+    // ── Upsert demo voter with constituency details ───────────────────────
+    private void upsertDemoVoter(String voterId, String name, String plainPassword,
+                                 String district, String division,
+                                 String constituencyVS, String constituencyLS) {
+        String id = voterId.toUpperCase();
+        Document existing = voters.find(eq("voterId", id)).first();
+        if (existing == null) {
+            voters.insertOne(makeVoterFull(id, name, plainPassword, district, division, constituencyVS, constituencyLS));
+            return;
         }
+
+        Document setDoc = new Document()
+                .append("name", name)
+                .append("district", district)
+                .append("division", division)
+                .append("constituencyVS", constituencyVS)
+                .append("constituencyLS", constituencyLS);
+
+        if (plainPassword != null && !plainPassword.isBlank()) {
+            String hashedPassword = BCrypt.hashpw(plainPassword, BCrypt.gensalt(12));
+            setDoc.append("password", hashedPassword);
+        }
+
+        voters.updateOne(eq("voterId", id), new Document("$set", setDoc));
     }
 
     // ── Build a voter document with BCrypt hashed password ─────────────────
@@ -166,6 +190,32 @@ public class MongoVoterService {
         return true;
     }
 
+    // ── Upsert voter profile with constituency (demo repair) ──────────────
+    public void upsertVoterProfile(String voterId, String name, String plainPassword,
+                                   String district, String division,
+                                   String constituencyVS, String constituencyLS) {
+        String id = voterId.toUpperCase();
+        Document existing = voters.find(eq("voterId", id)).first();
+        if (existing == null) {
+            voters.insertOne(makeVoterFull(id, name, plainPassword, district, division, constituencyVS, constituencyLS));
+            return;
+        }
+
+        Document setDoc = new Document()
+                .append("name", name)
+                .append("district", district)
+                .append("division", division)
+                .append("constituencyVS", constituencyVS)
+                .append("constituencyLS", constituencyLS);
+
+        if (plainPassword != null && !plainPassword.isBlank()) {
+            String hashedPassword = BCrypt.hashpw(plainPassword, BCrypt.gensalt(12));
+            setDoc.append("password", hashedPassword);
+        }
+
+        voters.updateOne(eq("voterId", id), new Document("$set", setDoc));
+    }
+
     // ── Get all voters for admin dashboard ─────────────────────────────────
     public java.util.List<Document> getAllVoters() {
         java.util.List<Document> list = new java.util.ArrayList<>();
@@ -200,5 +250,60 @@ public class MongoVoterService {
         Document votedElections = doc.get("votedElections", Document.class);
         safe.append("votedElections", votedElections != null ? votedElections : new Document());
         return safe;
+    }
+
+    // ── Search voters by name, voterId, district ──────────────────────────
+    public java.util.List<Document> searchVoters(String query, String district, String division) {
+        java.util.List<org.bson.conversions.Bson> filters = new java.util.ArrayList<>();
+        if (query != null && !query.isBlank()) {
+            Pattern pat = Pattern.compile(query, Pattern.CASE_INSENSITIVE);
+            filters.add(or(regex("name", pat), regex("voterId", pat)));
+        }
+        if (district != null && !district.isBlank()) {
+            filters.add(eq("district", district));
+        }
+        if (division != null && !division.isBlank()) {
+            filters.add(eq("division", division));
+        }
+        org.bson.conversions.Bson filter = filters.isEmpty() ? new Document() : and(filters);
+        java.util.List<Document> list = new java.util.ArrayList<>();
+        for (Document doc : voters.find(filter)) {
+            Document safe = new Document();
+            safe.append("voterId",  doc.getString("voterId"));
+            safe.append("name",     doc.getString("name"));
+            safe.append("district", doc.getString("district"));
+            safe.append("division", doc.getString("division"));
+            safe.append("constituencyVS", doc.getString("constituencyVS"));
+            safe.append("constituencyLS", doc.getString("constituencyLS"));
+            safe.append("hasVoted", doc.getBoolean("hasVoted", false));
+            list.add(safe);
+        }
+        return list;
+    }
+
+    // ── Get voter stats — counts per division, voted vs not voted ─────────
+    public Document getVoterStats() {
+        long total = voters.countDocuments();
+        long voted = voters.countDocuments(eq("hasVoted", true));
+        long pending = total - voted;
+
+        java.util.Map<String, long[]> byDivision = new java.util.LinkedHashMap<>();
+        for (Document doc : voters.find()) {
+            String div = doc.getString("division");
+            if (div == null || div.isBlank()) div = "Unknown";
+            byDivision.computeIfAbsent(div, k -> new long[]{0, 0});
+            byDivision.get(div)[0]++;
+            if (doc.getBoolean("hasVoted", false)) byDivision.get(div)[1]++;
+        }
+
+        Document divDoc = new Document();
+        for (java.util.Map.Entry<String, long[]> e : byDivision.entrySet()) {
+            divDoc.append(e.getKey(), new Document("total", e.getValue()[0]).append("voted", e.getValue()[1]));
+        }
+
+        return new Document("totalVoters", total)
+                .append("voted", voted)
+                .append("pending", pending)
+                .append("byDivision", divDoc);
     }
 }

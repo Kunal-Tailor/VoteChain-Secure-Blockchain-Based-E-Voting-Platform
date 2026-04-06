@@ -28,6 +28,7 @@ public class VotingApiServer {
     private static final String ENV_MONGO_URI      = "MONGO_URI";
     private static final String ENV_ADMIN_USER     = "ADMIN_USERNAME";
     private static final String ENV_ADMIN_PASSWORD = "ADMIN_PASSWORD";
+    private static final String ENV_AUTO_SEED      = "AUTO_SEED";
     private static final String DEFAULT_ADMIN_USER = "admin";
     private static final String DEFAULT_ADMIN_PW   = "admin123";
 
@@ -83,6 +84,19 @@ public class VotingApiServer {
         // Ensure genesis block exists in MongoDB (first-ever startup only)
         ensureGenesisBlock();
 
+        // Optional: auto-seed Maharashtra data if DB is empty
+        boolean autoSeed = "true".equalsIgnoreCase(System.getenv(ENV_AUTO_SEED));
+        if (autoSeed) {
+            boolean noElections = electionMongoService.isEmpty();
+            boolean noConstituencies = constituencyMongoService.countAll() == 0;
+            if (noElections || noConstituencies) {
+                System.out.println("🌱 AUTO_SEED enabled — seeding Maharashtra data...");
+                MaharashtraDataSeeder.seed(electionMongoService, constituencyMongoService, mongoVoterService);
+            } else {
+                System.out.println("ℹ️  AUTO_SEED enabled — existing data detected, skipping seed");
+            }
+        }
+
         // ── CORS ──────────────────────────────────────────────────────────
         before((req, res) -> {
             res.header("Access-Control-Allow-Origin",  "*");
@@ -91,6 +105,17 @@ public class VotingApiServer {
             res.header("Access-Control-Max-Age",       "3600");
             res.type("application/json");
             if (req.requestMethod().equalsIgnoreCase("OPTIONS")) halt(200, "OK");
+        });
+
+        // Return JSON for unknown routes / server errors (avoid HTML responses)
+        notFound((req, res) -> {
+            res.type("application/json");
+            res.status(404);
+            return JsonUtil.error("Route not found");
+        });
+        internalServerError((req, res) -> {
+            res.type("application/json");
+            return JsonUtil.error("Internal server error");
         });
 
         // ════════════════════════════════════════════════════════════════
@@ -340,6 +365,10 @@ public class VotingApiServer {
                     sb.append("{")
                             .append("\"voterId\":\"").append(esc(v.getString("voterId"))).append("\",")
                             .append("\"name\":\"").append(esc(v.getString("name"))).append("\",")
+                            .append("\"district\":\"").append(esc(v.getString("district"))).append("\",")
+                            .append("\"division\":\"").append(esc(v.getString("division"))).append("\",")
+                            .append("\"constituencyVS\":\"").append(esc(v.getString("constituencyVS"))).append("\",")
+                            .append("\"constituencyLS\":\"").append(esc(v.getString("constituencyLS"))).append("\",")
                             .append("\"hasVoted\":").append(v.getBoolean("hasVoted", false)).append(",")
                             .append("\"votedFor\":\"").append(esc(v.getString("votedFor"))).append("\"")
                             .append("}");
@@ -792,6 +821,396 @@ public class VotingApiServer {
             } catch (Exception e) {
                 res.status(500);
                 return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  CONSTITUENCY-LEVEL RESULTS
+        // ════════════════════════════════════════════════════════════════
+        get("/api/results/constituency", (req, res) -> {
+            try {
+                String constituencyId = req.queryParams("constituencyId");
+                String electionId = req.queryParams("electionId");
+                if (constituencyId == null || constituencyId.isEmpty()) {
+                    res.status(400); return JsonUtil.error("constituencyId required");
+                }
+
+                // Get constituency details
+                Document constDoc = constituencyMongoService.getById(constituencyId);
+                String constName = constDoc != null ? constDoc.getString("name") : constituencyId;
+
+                List<Document> allBlocks = blockchainMongoService.getAllBlocks();
+                Map<String, int[]> candidateVotes = new LinkedHashMap<>(); // name -> [votes]
+                Map<String, String> candidateParty = new LinkedHashMap<>(); // name -> party
+                int totalVotes = 0;
+
+                for (Document b : allBlocks) {
+                    if (b.getInteger("index") == 0) continue;
+                    String bConst = b.getString("constituencyId");
+                    if (bConst == null || !bConst.equals(constituencyId)) continue;
+                    if (electionId != null && !electionId.isEmpty()) {
+                        String bElection = b.getString("electionId");
+                        if (bElection == null || !bElection.equals(electionId)) continue;
+                    }
+                    String cand = b.getString("candidateName");
+                    String party = b.getString("party");
+                    candidateVotes.computeIfAbsent(cand, k -> new int[]{0})[0]++;
+                    if (party != null) candidateParty.put(cand, party);
+                    totalVotes++;
+                }
+
+                // Sort by votes descending
+                List<Map.Entry<String, int[]>> sorted = new ArrayList<>(candidateVotes.entrySet());
+                sorted.sort((a, b2) -> b2.getValue()[0] - a.getValue()[0]);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"constituencyId\":\"").append(esc(constituencyId)).append("\",")
+                  .append("\"constituencyName\":\"").append(esc(constName)).append("\",")
+                  .append("\"totalVotes\":").append(totalVotes).append(",")
+                  .append("\"candidates\":[");
+                for (int i = 0; i < sorted.size(); i++) {
+                    if (i > 0) sb.append(",");
+                    String name = sorted.get(i).getKey();
+                    int votes = sorted.get(i).getValue()[0];
+                    String party = candidateParty.getOrDefault(name, "IND");
+                    sb.append("{\"name\":\"").append(esc(name)).append("\",")
+                      .append("\"party\":\"").append(esc(party)).append("\",")
+                      .append("\"votes\":").append(votes).append(",")
+                      .append("\"percentage\":").append(totalVotes > 0 ? String.format("%.1f", votes * 100.0 / totalVotes) : "0")
+                      .append("}");
+                }
+                sb.append("],");
+                // Winner
+                if (!sorted.isEmpty()) {
+                    String winner = sorted.get(0).getKey();
+                    int margin = sorted.size() > 1 ? sorted.get(0).getValue()[0] - sorted.get(1).getValue()[0] : sorted.get(0).getValue()[0];
+                    sb.append("\"winner\":\"").append(esc(winner)).append("\",")
+                      .append("\"winnerParty\":\"").append(esc(candidateParty.getOrDefault(winner, "IND"))).append("\",")
+                      .append("\"margin\":").append(margin);
+                } else {
+                    sb.append("\"winner\":null,\"winnerParty\":null,\"margin\":0");
+                }
+                return sb.append("}").toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  SEAT TALLY — overall party-wise seat count
+        // ════════════════════════════════════════════════════════════════
+        get("/api/results/seats", (req, res) -> {
+            try {
+                String electionId = req.queryParams("electionId");
+                if (electionId == null || electionId.isEmpty()) {
+                    res.status(400); return JsonUtil.error("electionId required");
+                }
+                List<Document> constituencies = constituencyMongoService.getByElection(electionId);
+                List<Document> allBlocks = blockchainMongoService.getAllBlocks();
+
+                // Build vote count per constituency per candidate
+                Map<String, Map<String, int[]>> constVotes = new LinkedHashMap<>();
+                Map<String, String> candPartyMap = new LinkedHashMap<>();
+                int totalVotesCast = 0;
+
+                for (Document b : allBlocks) {
+                    if (b.getInteger("index") == 0) continue;
+                    String bElection = b.getString("electionId");
+                    if (bElection == null || !bElection.equals(electionId)) continue;
+                    String bConst = b.getString("constituencyId");
+                    String cand = b.getString("candidateName");
+                    String party = b.getString("party");
+                    if (bConst == null || cand == null) continue;
+                    constVotes.computeIfAbsent(bConst, k -> new LinkedHashMap<>())
+                              .computeIfAbsent(cand, k -> new int[]{0})[0]++;
+                    if (party != null) candPartyMap.put(cand, party);
+                    totalVotesCast++;
+                }
+
+                // Count seats won by each party
+                Map<String, Integer> seatTally = new LinkedHashMap<>();
+                Map<String, Integer> partyVotes = new LinkedHashMap<>();
+                int seatsDecided = 0;
+
+                for (Map.Entry<String, Map<String, int[]>> entry : constVotes.entrySet()) {
+                    String leadingCand = null; int maxVotes = 0;
+                    for (Map.Entry<String, int[]> candEntry : entry.getValue().entrySet()) {
+                        int v = candEntry.getValue()[0];
+                        String party = candPartyMap.getOrDefault(candEntry.getKey(), "IND");
+                        partyVotes.put(party, partyVotes.getOrDefault(party, 0) + v);
+                        if (v > maxVotes) { maxVotes = v; leadingCand = candEntry.getKey(); }
+                    }
+                    if (leadingCand != null) {
+                        String winParty = candPartyMap.getOrDefault(leadingCand, "IND");
+                        seatTally.put(winParty, seatTally.getOrDefault(winParty, 0) + 1);
+                        seatsDecided++;
+                    }
+                }
+
+                // Sort by seats descending
+                List<Map.Entry<String, Integer>> sortedSeats = new ArrayList<>(seatTally.entrySet());
+                sortedSeats.sort((a, b2) -> b2.getValue() - a.getValue());
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"electionId\":\"").append(esc(electionId)).append("\",")
+                  .append("\"totalSeats\":").append(constituencies.size()).append(",")
+                  .append("\"seatsDecided\":").append(seatsDecided).append(",")
+                  .append("\"totalVotes\":").append(totalVotesCast).append(",")
+                  .append("\"seatTally\":[");
+                for (int i = 0; i < sortedSeats.size(); i++) {
+                    if (i > 0) sb.append(",");
+                    String party = sortedSeats.get(i).getKey();
+                    sb.append("{\"party\":\"").append(esc(party)).append("\",")
+                      .append("\"seats\":").append(sortedSeats.get(i).getValue()).append(",")
+                      .append("\"votes\":").append(partyVotes.getOrDefault(party, 0))
+                      .append("}");
+                }
+                sb.append("],\"partyVotes\":{");
+                boolean first = true;
+                for (Map.Entry<String, Integer> e : partyVotes.entrySet()) {
+                    if (!first) sb.append(","); first = false;
+                    sb.append("\"").append(esc(e.getKey())).append("\":").append(e.getValue());
+                }
+                return sb.append("}}").toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  DIVISION RESULTS — per-division seat tallies
+        // ════════════════════════════════════════════════════════════════
+        get("/api/results/division", (req, res) -> {
+            try {
+                String electionId = req.queryParams("electionId");
+                String division = req.queryParams("division");
+                if (electionId == null || electionId.isEmpty()) {
+                    res.status(400); return JsonUtil.error("electionId required");
+                }
+                List<Document> allBlocks = blockchainMongoService.getAllBlocks();
+                List<Document> constituencies = division != null && !division.isEmpty()
+                        ? constituencyMongoService.getByDivision(electionId, division)
+                        : constituencyMongoService.getByElection(electionId);
+
+                java.util.Set<String> constIds = new java.util.HashSet<>();
+                for (Document c : constituencies) constIds.add(c.getString("constituencyId"));
+
+                // Count votes per constituency per candidate
+                Map<String, Map<String, int[]>> constVotes = new LinkedHashMap<>();
+                Map<String, String> candPartyMap = new LinkedHashMap<>();
+                for (Document b : allBlocks) {
+                    if (b.getInteger("index") == 0) continue;
+                    String bElection = b.getString("electionId");
+                    if (bElection == null || !bElection.equals(electionId)) continue;
+                    String bConst = b.getString("constituencyId");
+                    if (!constIds.contains(bConst)) continue;
+                    String cand = b.getString("candidateName");
+                    String party = b.getString("party");
+                    constVotes.computeIfAbsent(bConst, k -> new LinkedHashMap<>())
+                              .computeIfAbsent(cand, k -> new int[]{0})[0]++;
+                    if (party != null) candPartyMap.put(cand, party);
+                }
+
+                Map<String, Integer> seatTally = new LinkedHashMap<>();
+                int totalVotes = 0;
+                for (Map.Entry<String, Map<String, int[]>> entry : constVotes.entrySet()) {
+                    String leader = null; int max = 0;
+                    for (Map.Entry<String, int[]> ce : entry.getValue().entrySet()) {
+                        totalVotes += ce.getValue()[0];
+                        if (ce.getValue()[0] > max) { max = ce.getValue()[0]; leader = ce.getKey(); }
+                    }
+                    if (leader != null) {
+                        String p = candPartyMap.getOrDefault(leader, "IND");
+                        seatTally.put(p, seatTally.getOrDefault(p, 0) + 1);
+                    }
+                }
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"division\":\"").append(esc(division != null ? division : "All")).append("\",")
+                  .append("\"totalConstituencies\":").append(constituencies.size()).append(",")
+                  .append("\"totalVotes\":").append(totalVotes).append(",")
+                  .append("\"seatTally\":{");
+                boolean first = true;
+                for (Map.Entry<String, Integer> e : seatTally.entrySet()) {
+                    if (!first) sb.append(","); first = false;
+                    sb.append("\"").append(esc(e.getKey())).append("\":").append(e.getValue());
+                }
+                return sb.append("}}").toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  GLOBAL STATS — dashboard statistics
+        // ════════════════════════════════════════════════════════════════
+        get("/api/stats", (req, res) -> {
+            try {
+                Document voterStats = mongoVoterService.getVoterStats();
+                long totalBlocks = blockchainMongoService.getAllBlocks().size();
+                List<Document> elections = electionMongoService.getAllElections();
+                long activeElections = elections.stream()
+                        .filter(e -> "ACTIVE".equals(e.getString("status"))).count();
+
+                long vsCount = 0, lsCount = 0;
+                for (Document el : elections) {
+                    String eid = el.getString("electionId");
+                    long count = constituencyMongoService.countByElection(eid);
+                    if ("VIDHAN_SABHA".equals(el.getString("type"))) vsCount = count;
+                    else if ("LOK_SABHA".equals(el.getString("type"))) lsCount = count;
+                }
+
+                long totalVoters = voterStats.getLong("totalVoters");
+                long voted = voterStats.getLong("voted");
+                double turnout = totalVoters > 0 ? (voted * 100.0 / totalVoters) : 0;
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{")
+                  .append("\"totalVoters\":").append(totalVoters).append(",")
+                  .append("\"voted\":").append(voted).append(",")
+                  .append("\"pending\":").append(voterStats.getLong("pending")).append(",")
+                  .append("\"turnout\":").append(String.format("%.1f", turnout)).append(",")
+                  .append("\"totalBlocks\":").append(totalBlocks).append(",")
+                  .append("\"activeElections\":").append(activeElections).append(",")
+                  .append("\"totalElections\":").append(elections.size()).append(",")
+                  .append("\"vsConstituencies\":").append(vsCount).append(",")
+                  .append("\"lsConstituencies\":").append(lsCount).append(",")
+                  .append("\"byDivision\":");
+
+                // Serialize byDivision
+                Document byDiv = voterStats.get("byDivision", Document.class);
+                if (byDiv != null) {
+                    sb.append("{");
+                    boolean first = true;
+                    for (String key : byDiv.keySet()) {
+                        Document d = byDiv.get(key, Document.class);
+                        if (!first) sb.append(","); first = false;
+                        sb.append("\"").append(esc(key)).append("\":{")
+                          .append("\"total\":").append(d.getLong("total")).append(",")
+                          .append("\"voted\":").append(d.getLong("voted")).append("}");
+                    }
+                    sb.append("}");
+                } else {
+                    sb.append("{}");
+                }
+                return sb.append("}").toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  VOTER SEARCH — filter voters by query, district, division
+        // ════════════════════════════════════════════════════════════════
+        get("/api/admin/voters/search", (req, res) -> {
+            try {
+                String q = req.queryParams("q");
+                String district = req.queryParams("district");
+                String division = req.queryParams("division");
+                List<Document> voters = mongoVoterService.searchVoters(q, district, division);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"count\":").append(voters.size()).append(",\"voters\":[");
+                for (int i = 0; i < voters.size(); i++) {
+                    Document v = voters.get(i);
+                    if (i > 0) sb.append(",");
+                    sb.append("{")
+                      .append("\"voterId\":\"").append(esc(v.getString("voterId"))).append("\",")
+                      .append("\"name\":\"").append(esc(v.getString("name"))).append("\",")
+                      .append("\"district\":\"").append(esc(v.getString("district"))).append("\",")
+                      .append("\"division\":\"").append(esc(v.getString("division"))).append("\",")
+                      .append("\"constituencyVS\":\"").append(esc(v.getString("constituencyVS"))).append("\",")
+                      .append("\"constituencyLS\":\"").append(esc(v.getString("constituencyLS"))).append("\",")
+                      .append("\"hasVoted\":").append(v.getBoolean("hasVoted", false))
+                      .append("}");
+                }
+                return sb.append("]}").toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  REGISTER VOTER (FULL) — with constituency assignments
+        // ════════════════════════════════════════════════════════════════
+        post("/api/admin/register-voter-full", (req, res) -> {
+            try {
+                Map<String, String> body = JsonUtil.parseMap(req.body());
+                String voterId  = body.getOrDefault("voterId",  "").trim().toUpperCase();
+                String name     = body.getOrDefault("name",     "").trim();
+                String password = body.getOrDefault("password", "").trim();
+                String district = body.getOrDefault("district", "").trim();
+                String division = body.getOrDefault("division", "").trim();
+                String constVS  = body.getOrDefault("constituencyVS", "").trim();
+                String constLS  = body.getOrDefault("constituencyLS", "").trim();
+
+                if (voterId.isEmpty() || password.isEmpty() || name.isEmpty()) {
+                    res.status(400);
+                    return JsonUtil.error("voterId, name, and password are required");
+                }
+                boolean ok = mongoVoterService.registerVoterWithConstituency(
+                        voterId, name, password, district, division, constVS, constLS);
+                if (!ok) {
+                    res.status(400);
+                    return JsonUtil.error("Voter ID already exists");
+                }
+                return JsonUtil.obj("success", true, "voterId", voterId,
+                        "district", district, "division", division);
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  LIVE DASHBOARD — real-time election stats
+        // ════════════════════════════════════════════════════════════════
+        get("/api/results/live", (req, res) -> {
+            try {
+                String electionId = req.queryParams("electionId");
+                List<Document> allBlocks = blockchainMongoService.getAllBlocks();
+                Map<String, Integer> partyVotes = new LinkedHashMap<>();
+                int totalVotes = 0;
+                String lastVoteTime = "";
+
+                for (Document b : allBlocks) {
+                    if (b.getInteger("index") == 0) continue;
+                    if (electionId != null && !electionId.isEmpty()) {
+                        String bElection = b.getString("electionId");
+                        if (bElection == null || !bElection.equals(electionId)) continue;
+                    }
+                    String party = b.getString("party");
+                    if (party != null) partyVotes.put(party, partyVotes.getOrDefault(party, 0) + 1);
+                    totalVotes++;
+                    lastVoteTime = b.getString("timestamp");
+                }
+
+                Document voterStats = mongoVoterService.getVoterStats();
+                long totalVoters = voterStats.getLong("totalVoters");
+                double turnout = totalVoters > 0 ? (totalVotes * 100.0 / totalVoters) : 0;
+
+                // Leading party
+                String leadingParty = ""; int leadingVotes = 0;
+                for (Map.Entry<String, Integer> e : partyVotes.entrySet()) {
+                    if (e.getValue() > leadingVotes) { leadingVotes = e.getValue(); leadingParty = e.getKey(); }
+                }
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"totalVotes\":").append(totalVotes).append(",")
+                  .append("\"totalVoters\":").append(totalVoters).append(",")
+                  .append("\"turnout\":").append(String.format("%.1f", turnout)).append(",")
+                  .append("\"leadingParty\":\"").append(esc(leadingParty)).append("\",")
+                  .append("\"leadingVotes\":").append(leadingVotes).append(",")
+                  .append("\"lastVoteTime\":\"").append(esc(lastVoteTime)).append("\",")
+                  .append("\"totalBlocks\":").append(allBlocks.size()).append(",")
+                  .append("\"partyVotes\":{");
+                boolean first = true;
+                for (Map.Entry<String, Integer> e : partyVotes.entrySet()) {
+                    if (!first) sb.append(","); first = false;
+                    sb.append("\"").append(esc(e.getKey())).append("\":").append(e.getValue());
+                }
+                return sb.append("}}").toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
             }
         });
 

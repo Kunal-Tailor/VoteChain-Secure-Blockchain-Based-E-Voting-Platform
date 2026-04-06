@@ -111,4 +111,11 @@ public class ConstituencyMongoService {
     public long countByElection(String electionId) {
         return constituencies.countDocuments(eq("electionId", electionId));
     }
+
+    /**
+     * Count all constituencies
+     */
+    public long countAll() {
+        return constituencies.countDocuments();
+    }
 }

@@ -4,6 +4,13 @@
 
 echo "Starting Online Voting System..."
 
+# Load environment variables from .env if present
+if [ -f ".env" ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 # Find JavaFX path (adjust if needed)
 JAVAFX_PATH=""
 if [ -d "/usr/lib/jvm/openjfx" ]; then

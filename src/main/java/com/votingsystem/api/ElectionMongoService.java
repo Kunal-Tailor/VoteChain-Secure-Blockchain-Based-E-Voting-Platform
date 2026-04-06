@@ -70,6 +70,13 @@ public class ElectionMongoService {
     }
 
     /**
+     * Check if elections collection is empty
+     */
+    public boolean isEmpty() {
+        return elections.countDocuments() == 0;
+    }
+
+    /**
      * Get election by ID
      */
     public Document getElection(String electionId) {

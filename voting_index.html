@@ -3,175 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Maharashtra E-Voting System — Blockchain Based</title>
-  <meta name="description" content="Secure Blockchain-Based Online Voting System for Maharashtra State Elections — Vidhan Sabha, Lok Sabha"/>
-  <link href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <title>Maharashtra E-Voting System — Blockchain-Based</title>
+  <meta name="description" content="Secure blockchain-based online voting system for Maharashtra state elections — Vidhan Sabha, Lok Sabha"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Tiro+Devanagari+Hindi&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--saffron:#FF9933;--saffron-light:#ffb366;--saffron-dim:rgba(255,153,51,0.12);--green:#138808;--green-dim:rgba(19,136,8,0.12);--blue:#003087;--bg:#07070f;--card:rgba(255,255,255,0.035);--border:rgba(255,153,51,0.18);--border2:rgba(255,255,255,0.07);--text:#eeeef5;--muted:rgba(238,238,245,0.45);--error:#ff5252;--success:#00e676;--r:14px;--shadow:0 20px 60px rgba(0,0,0,0.5)}
-    html{scroll-behavior:smooth}
-    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;background-image:radial-gradient(ellipse 80% 60% at 10% 20%,rgba(255,153,51,0.07) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 90% 80%,rgba(19,136,8,0.06) 0%,transparent 60%),radial-gradient(ellipse 50% 50% at 50% 50%,rgba(0,48,135,0.08) 0%,transparent 70%)}
-    body::before{content:'';position:fixed;inset:0;pointer-events:none;background:url('./assets/maharashtra-hero.svg') center/cover no-repeat;opacity:.08;z-index:0}
-    .nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;background:rgba(7,7,15,0.85);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
-    .nav-brand{display:flex;align-items:center;gap:10px;font-family:'Tiro Devanagari Hindi',serif;font-size:1.25rem;color:var(--saffron)}
-    .tribar{display:flex;flex-direction:column;width:5px;height:22px;border-radius:3px;overflow:hidden;gap:1px}
-    .tribar span:nth-child(1){flex:1;background:var(--saffron)}.tribar span:nth-child(2){flex:1;background:#fff}.tribar span:nth-child(3){flex:1;background:var(--green)}
-    .nav-right{display:flex;align-items:center;gap:12px}
-    .nav-pill{padding:5px 14px;border-radius:20px;font-size:.78rem;font-weight:500;background:var(--saffron-dim);border:1px solid var(--border);color:var(--saffron)}
-    .nav-logout{padding:6px 16px;border-radius:8px;font-size:.8rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:.2s;font-family:'DM Sans',sans-serif}
-    .nav-logout:hover{background:rgba(255,82,82,0.12);color:var(--error);border-color:rgba(255,82,82,0.3)}
-    .screen{display:none;position:relative;z-index:1;min-height:calc(100vh - 57px)}
-    .screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px}
-    .screen.top-align{justify-content:flex-start;padding-top:40px}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-    @keyframes bounceIn{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-    .anim{animation:fadeUp .4s cubic-bezier(.22,1,.36,1) both}
-    .anim2{animation:fadeUp .4s .08s cubic-bezier(.22,1,.36,1) both}
-    .anim3{animation:fadeUp .4s .16s cubic-bezier(.22,1,.36,1) both}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:40px;backdrop-filter:blur(20px);box-shadow:var(--shadow);width:100%;max-width:460px}
-    .card-md{max-width:680px}.card-lg{max-width:980px}.card-xl{max-width:1100px}
-    .page-title{font-family:'Tiro Devanagari Hindi',serif;font-size:2rem;background:linear-gradient(135deg,var(--saffron),#ffdd88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;line-height:1.2}
-    .page-sub{color:var(--muted);font-size:.88rem;margin-bottom:28px;line-height:1.6}
-    .section-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--saffron);margin-bottom:10px;display:flex;align-items:center;gap:6px}
-    .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
-    .form-group{margin-bottom:18px}.form-label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
-    .form-input{width:100%;padding:13px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,153,51,0.2);border-radius:9px;color:var(--text);font-size:.92rem;font-family:'DM Sans',sans-serif;transition:.2s;outline:none}
-    .form-input:focus{border-color:var(--saffron);background:rgba(255,153,51,0.07);box-shadow:0 0 0 3px rgba(255,153,51,0.1)}
-    .form-input::placeholder{color:rgba(238,238,245,0.25)}
-    select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FF9933' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
-    .btn{display:block;width:100%;padding:14px 20px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.92rem;font-weight:600;cursor:pointer;transition:.2s;text-align:center;letter-spacing:.01em}
-    .btn+.btn{margin-top:10px}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none !important}
-    .btn-primary{background:linear-gradient(135deg,var(--saffron),#e07000);color:#fff;box-shadow:0 4px 20px rgba(255,153,51,0.3)}
-    .btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,153,51,0.45)}
-    .btn-secondary{background:rgba(255,255,255,0.05);color:var(--text);border:1px solid var(--border2)}
-    .btn-secondary:hover:not(:disabled){background:rgba(255,255,255,0.09)}
-    .btn-green{background:linear-gradient(135deg,#138808,#0d6606);color:#fff}
-    .btn-green:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(19,136,8,0.4)}
-    .btn-inline{width:auto;display:inline-block;padding:9px 22px}
-    .alert{padding:11px 15px;border-radius:9px;font-size:.85rem;margin-bottom:16px;display:none;align-items:center;gap:8px}
-    .alert.show{display:flex}
-    .alert-error{background:rgba(255,82,82,0.1);border:1px solid rgba(255,82,82,0.25);color:#ff8080}
-    .alert-success{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.25);color:#00e676}
-    .alert-warn{background:rgba(255,153,51,0.1);border:1px solid rgba(255,153,51,0.25);color:var(--saffron)}
-    .home-hero{text-align:center;max-width:980px}
-    .hero-image-wrap{margin:0 auto 20px;max-width:860px;border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
-    .hero-image{width:100%;display:block;max-height:360px;object-fit:cover}
-    .home-flag{font-size:5.5rem;display:block;margin-bottom:12px;animation:float 4s ease-in-out infinite}
-    .home-title{font-family:'Tiro Devanagari Hindi',serif;font-size:2.8rem;background:linear-gradient(135deg,var(--saffron) 0%,#fff 50%,var(--green) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;line-height:1.15}
-    .home-sub{color:var(--muted);font-size:1rem;line-height:1.6;margin-bottom:12px}
-    .triband{display:flex;height:3px;width:160px;margin:16px auto 36px;border-radius:2px;overflow:hidden}
-    .triband span:nth-child(1){flex:1;background:var(--saffron)}.triband span:nth-child(2){flex:1;background:#fff}.triband span:nth-child(3){flex:1;background:var(--green)}
-    .home-btns{display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;margin:0 auto}
-    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
-    .stat-box{background:var(--saffron-dim);border:1px solid var(--border);border-radius:11px;padding:18px;text-align:center}
-    .stat-num{font-size:2rem;font-weight:700;color:var(--saffron);line-height:1}
-    .stat-lbl{font-size:.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
-    .cand-list{display:flex;flex-direction:column;gap:9px;margin-bottom:24px}
-    .cand-card{display:flex;align-items:center;gap:14px;padding:15px 18px;border-radius:11px;border:2px solid var(--border2);background:rgba(255,255,255,0.025);cursor:pointer;transition:.2s;user-select:none}
-    .cand-card:hover{border-color:rgba(255,153,51,0.35);background:rgba(255,153,51,0.05)}
-    .cand-card.selected{border-color:var(--saffron);background:rgba(255,153,51,0.1)}
-    .cand-symbol{font-size:2rem;flex-shrink:0}.cand-info{flex:1}
-    .cand-name{font-weight:600;font-size:.92rem}
-    .cand-party{font-size:.75rem;color:var(--muted);margin-top:2px}
-    .cand-tag{font-size:.7rem;color:var(--saffron);font-weight:600;margin-top:3px;font-family:'JetBrains Mono',monospace}
-    .cand-radio{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s}
-    .cand-card.selected .cand-radio{border-color:var(--saffron)}
-    .cand-dot{width:8px;height:8px;border-radius:50%;background:var(--saffron);display:none}
-    .cand-card.selected .cand-dot{display:block}
-    .success-icon{font-size:5rem;text-align:center;display:block;animation:bounceIn .6s cubic-bezier(.36,.07,.19,.97)}
-    .info-rows{background:rgba(0,0,0,0.3);border-radius:10px;padding:4px 0;margin:20px 0}
-    .info-row{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;font-size:.875rem;border-bottom:1px solid rgba(255,255,255,0.04)}
-    .info-row:last-child{border:none}.info-key{color:var(--muted)}.info-val{font-weight:600}
-    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
-    @media(max-width:640px){.charts-grid{grid-template-columns:1fr}}
-    .chart-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
-    .chart-title{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:14px}
-    .leader-banner{background:linear-gradient(135deg,rgba(255,153,51,.12),rgba(19,136,8,.12));border:1px solid rgba(255,153,51,.3);border-radius:11px;padding:18px;text-align:center;margin-bottom:20px}
-    .leader-title{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-    .leader-name{font-size:1.25rem;font-weight:700;color:var(--saffron)}
-    .leader-votes{font-size:.82rem;color:var(--muted);margin-top:3px}
-    .admin-tabs{display:flex;border-radius:10px;overflow:hidden;background:rgba(0,0,0,0.3);border:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap}
-    .admin-tab{flex:1;padding:11px 8px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.78rem;transition:.2s;border-right:1px solid var(--border);min-width:100px}
-    .admin-tab:last-child{border-right:none}
-    .admin-tab.active{background:var(--saffron-dim);color:var(--saffron);font-weight:700}
-    .admin-tab:hover:not(.active){background:rgba(255,255,255,0.04);color:var(--text)}
-    .tab-panel{display:none}.tab-panel.active{display:block;animation:fadeIn .3s ease}
-    .status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:.75rem;font-weight:700}
-    .badge-secure{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:#00e676}
-    .badge-tampered{background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.3);color:var(--error)}
-    .badge-active{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:#00e676}
-    .badge-upcoming{background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.3);color:#ffc107}
-    .badge-completed{background:rgba(158,158,158,.1);border:1px solid rgba(158,158,158,.3);color:#9e9e9e}
-    .vtable{width:100%;border-collapse:collapse}
-    .vtable th{text-align:left;padding:9px 12px;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border)}
-    .vtable td{padding:11px 12px;font-size:.83rem;border-bottom:1px solid rgba(255,255,255,0.03)}
-    .vtable tr:last-child td{border:none}
-    .voted-chip{padding:3px 9px;border-radius:12px;font-size:.7rem;font-weight:700}
-    .chip-yes{background:rgba(0,230,118,.12);color:#00e676}
-    .chip-no{background:rgba(255,255,255,.05);color:var(--muted)}
-    .overlay{position:fixed;inset:0;background:rgba(7,7,15,.8);backdrop-filter:blur(6px);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-    .overlay.show{display:flex}
-    .spinner{width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,153,51,.2);border-top-color:var(--saffron);animation:spin .7s linear infinite}
-    .overlay-text{color:var(--saffron);font-size:.9rem;font-weight:500;text-align:center;max-width:300px}
-    .server-banner{position:fixed;bottom:20px;right:20px;z-index:500;padding:10px 16px;border-radius:10px;font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:8px;backdrop-filter:blur(12px);transition:all .3s}
-    .server-ok{background:rgba(0,230,118,.12);border:1px solid rgba(0,230,118,.3);color:#00e676}
-    .server-err{background:rgba(255,82,82,.12);border:1px solid rgba(255,82,82,.3);color:#ff8080}
-    .server-dot{width:7px;height:7px;border-radius:50%}
-    .server-ok .server-dot{background:#00e676;box-shadow:0 0 6px #00e676}
-    .server-err .server-dot{background:#ff5252;box-shadow:0 0 6px #ff5252}
-    .election-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:.2s;margin-bottom:12px}
-    .election-card:hover{border-color:var(--saffron);background:rgba(255,153,51,0.05);transform:translateY(-2px)}
-    .election-card.active-election{border-color:rgba(0,230,118,0.4)}
-    .election-card h3{font-size:1rem;color:var(--text);margin-bottom:4px}
-    .election-card p{font-size:.78rem;color:var(--muted)}
-    .election-type-icon{font-size:2.5rem;margin-bottom:8px;display:block}
-    .election-visual{width:100%;height:130px;object-fit:cover;border-radius:10px;border:1px solid var(--border2);margin-bottom:12px;background:#0f1a30}
-    .constituency-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:600;background:rgba(0,48,135,0.15);border:1px solid rgba(0,48,135,0.3);color:#7cacf8;margin-top:6px}
-    .division-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
-    @media(max-width:640px){.division-grid{grid-template-columns:1fr 1fr}.card{padding:28px 22px}.nav{padding:12px 18px}.home-title{font-size:2rem}}
-    .division-card{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:.2s}
-    .division-card:hover{border-color:var(--saffron);background:rgba(255,153,51,0.05)}
-    .division-card.selected{border-color:var(--saffron);background:rgba(255,153,51,0.1)}
-    .division-card h4{font-size:.85rem;color:var(--text);margin-bottom:4px}
-    .division-card p{font-size:.68rem;color:var(--muted)}
-    .party-bar{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
-    .party-bar:last-child{border:none}
-    .party-bar-name{font-size:.8rem;width:80px;flex-shrink:0;color:var(--text)}
-    .party-bar-fill{flex:1;height:24px;border-radius:6px;background:rgba(255,255,255,0.05);overflow:hidden;position:relative}
-    .party-bar-inner{height:100%;border-radius:6px;transition:width .6s ease}
-    .party-bar-count{font-size:.75rem;color:var(--muted);width:40px;text-align:right;flex-shrink:0}
-    .search-box{position:relative;margin-bottom:16px}
-    .search-box input{width:100%;padding:11px 16px 11px 38px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:.85rem;font-family:'DM Sans',sans-serif;outline:none;transition:.2s}
-    .search-box input:focus{border-color:var(--saffron);background:rgba(255,153,51,0.05)}
-    .search-box::before{content:'🔍';position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.85rem}
-    .const-list{max-height:400px;overflow-y:auto;padding-right:4px}
-    .const-list::-webkit-scrollbar{width:3px}.const-list::-webkit-scrollbar-thumb{background:rgba(255,153,51,0.3);border-radius:2px}
-    .const-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);margin-bottom:6px;cursor:pointer;transition:.2s;font-size:.82rem}
-    .const-item:hover{border-color:var(--saffron);background:rgba(255,153,51,0.04)}
-    .const-item .const-num{color:var(--saffron);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:.75rem;margin-right:10px}
-    .const-item .const-name{flex:1;color:var(--text)}
-    .const-item .const-district{font-size:.7rem;color:var(--muted)}
-    .const-item .reservation-tag{font-size:.6rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:8px}
-    .tag-sc{background:rgba(33,150,243,0.15);color:#64b5f6}.tag-st{background:rgba(156,39,176,0.15);color:#ce93d8}.tag-gen{background:rgba(255,255,255,0.05);color:var(--muted)}
-    .chain-wrap{display:flex;flex-direction:column;gap:0;max-height:420px;overflow-y:auto;padding-right:4px}
-    .chain-wrap::-webkit-scrollbar{width:3px}.chain-wrap::-webkit-scrollbar-thumb{background:rgba(255,153,51,0.3);border-radius:2px}
-    .chain-item{display:flex;gap:12px}
-    .chain-connector{display:flex;flex-direction:column;align-items:center;padding-top:16px}
-    .chain-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;background:var(--saffron);border:2px solid rgba(255,153,51,0.4);box-shadow:0 0 8px rgba(255,153,51,0.5)}
-    .chain-dot.genesis{background:#003087;border-color:rgba(0,48,135,0.6);box-shadow:0 0 8px rgba(0,48,135,0.5)}
-    .chain-line{width:2px;flex:1;min-height:16px;background:linear-gradient(to bottom,rgba(255,153,51,0.35),rgba(255,153,51,0.05))}
-    .chain-card{flex:1;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:9px;padding:12px 15px;margin-bottom:10px}
-    .chain-title{font-weight:600;font-size:.82rem;color:var(--saffron);margin-bottom:5px}
-    .chain-meta{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:2px}
-    .chain-hash{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:rgba(255,153,51,0.55);background:rgba(0,0,0,0.35);padding:5px 8px;border-radius:5px;margin-top:6px;word-break:break-all}
-    .chain-hash.prev{color:rgba(19,136,8,0.7);margin-top:4px}
-    .reg-box{background:var(--saffron-dim);border:1px solid var(--border);border-radius:11px;padding:22px;margin-top:4px}
-  </style>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
   <!-- NAV -->
@@ -197,18 +33,124 @@
     <div class="overlay-text" id="overlayText">Processing...</div>
   </div>
 
+  <!-- CONFETTI CANVAS -->
+  <canvas id="confettiCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999"></canvas>
+
   <!-- ══════════════════ SCREEN: HOME ══════════════════ -->
   <div class="screen active" id="s-home">
     <div class="home-hero">
       <div class="hero-image-wrap anim">
-        <img src="./assets/maharashtra-hero.svg" alt="Maharashtra online voting portal banner" class="hero-image"/>
+        <img src="assets/vidhan.jpg" alt="Maharashtra Vidhan Bhavan, Mumbai" class="hero-image" loading="eager"/>
+        <div class="hero-caption">Maharashtra Vidhan Bhavan, Mumbai</div>
       </div>
-      <h1 class="home-title anim2">Maharashtra E-Voting</h1>
+      <div class="hero-kicker anim2">Blockchain-secured • Tamper-evident • Citizen-first</div>
+      <h1 class="home-title anim2">Maharashtra E-Voting System</h1>
       <div class="triband anim2"><span></span><span></span><span></span></div>
       <p class="home-sub anim3">
         Maharashtra State Secure Digital Voting Platform (महाराष्ट्र सुरक्षित मतदान प्रणाली)<br>
-        Vidhan Sabha (288 seats) · Lok Sabha (48 seats) · SHA-256 PoW · MongoDB Atlas
+        Vidhan Sabha (288 seats) · Lok Sabha (48 seats) · SHA-256 Proof-of-Work · MongoDB Atlas
       </p>
+
+      <!-- REAL IMAGE GALLERY -->
+      <div class="home-gallery anim3">
+        <div class="gallery-item">
+          <img src="https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=900&q=80" alt="Indian voters in line at a polling station" loading="lazy"/>
+          <span>Voters in Line</span>
+        </div>
+        <div class="gallery-item">
+          <img src="https://images.unsplash.com/photo-1611348586804-61bf6c080437?auto=format&fit=crop&w=900&q=80" alt="Ink-marked finger after voting" loading="lazy"/>
+          <span>Ink Mark</span>
+        </div>
+        <div class="gallery-item">
+          <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80" alt="Maharashtra region landscape" loading="lazy"/>
+          <span>Maharashtra Region</span>
+        </div>
+        <div class="gallery-item">
+          <img src="https://images.unsplash.com/photo-1494172961521-33799ddd43a5?auto=format&fit=crop&w=900&q=80" alt="Electronic voting machine concept" loading="lazy"/>
+          <span>Digital Voting</span>
+        </div>
+      </div>
+
+      <!-- ANIMATED STATS -->
+      <div class="home-stats anim3" id="homeStats">
+        <div class="home-stat-box">
+          <div class="home-stat-num" data-target="288" id="hs-vs">0</div>
+          <div class="home-stat-label">Vidhan Sabha Constituencies</div>
+        </div>
+        <div class="home-stat-box">
+          <div class="home-stat-num" data-target="48" id="hs-ls">0</div>
+          <div class="home-stat-label">Lok Sabha Constituencies</div>
+        </div>
+        <div class="home-stat-box">
+          <div class="home-stat-num" data-target="0" id="hs-voters">0</div>
+          <div class="home-stat-label">Registered Voters</div>
+        </div>
+        <div class="home-stat-box">
+          <div class="home-stat-num" data-target="0" id="hs-blocks">0</div>
+          <div class="home-stat-label">Blocks Mined</div>
+        </div>
+      </div>
+
+      <!-- MAHARASHTRA MAP -->
+      <div class="home-map anim3">
+        <div class="map-card">
+          <div class="map-header">
+            <div class="section-label">Maharashtra Constituencies</div>
+            <p class="map-sub">288 Vidhan Sabha seats · 48 Lok Sabha seats · 6 Divisions · 36 Districts</p>
+          </div>
+          <div class="map-wrap">
+            <div class="mh-map-container">
+              <!-- VS Map Container -->
+              <div class="mh-svg-map map-vs active" id="map-vs-container">
+                <svg id="maharashtra-vs-svg" viewBox="0 0 800 650" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#0a0e1a;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#12141f;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="800" height="650" fill="url(#bgGrad)" rx="8"/>
+                  <!-- Maharashtra map image -->
+                  <image href="assets/image.png" x="100" y="20" width="600" height="580" preserveAspectRatio="xMidYMid meet"/>
+                  <!-- Constituency overlay markers -->
+                  <g id="vs-constituencies"></g>
+                </svg>
+                <!-- Tooltip positioned over the SVG -->
+                <div class="map-tooltip" id="map-tooltip" style="display:none">
+                  <div class="tooltip-content" id="tooltip-content"></div>
+                </div>
+              </div>
+              <!-- LS Map Container -->
+              <div class="mh-svg-map map-ls" id="map-ls-container">
+                <svg id="maharashtra-ls-svg" viewBox="0 0 800 650" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="bgGradLs" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#0a0e1a;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#12141f;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="800" height="650" fill="url(#bgGradLs)" rx="8"/>
+                  <image href="assets/image.png" x="100" y="20" width="600" height="580" preserveAspectRatio="xMidYMid meet"/>
+                  <g id="ls-constituencies"></g>
+                </svg>
+              </div>
+            </div>
+            <div class="map-toggle">
+              <button class="map-badge vs active" onclick="setMapLayer('vs')">🏛️ 288 VS</button>
+              <button class="map-badge ls" onclick="setMapLayer('ls')">🏛️ 48 LS</button>
+            </div>
+          </div>
+          <div class="map-legend" id="map-legend">
+            <span class="legend-chip" style="background:rgba(255,153,51,0.15);border-color:rgba(255,153,51,0.4);color:#FF9933">Konkan</span>
+            <span class="legend-chip" style="background:rgba(0,191,255,0.15);border-color:rgba(0,191,255,0.4);color:#00BFFF">Pune</span>
+            <span class="legend-chip" style="background:rgba(156,39,176,0.15);border-color:rgba(156,39,176,0.4);color:#9C27B0">Nashik</span>
+            <span class="legend-chip" style="background:rgba(255,87,34,0.15);border-color:rgba(255,87,34,0.4);color:#FF5722">Chh. Sambhajinagar</span>
+            <span class="legend-chip" style="background:rgba(76,175,80,0.15);border-color:rgba(76,175,80,0.4);color:#4CAF50">Amravati</span>
+            <span class="legend-chip" style="background:rgba(255,215,0,0.15);border-color:rgba(255,215,0,0.4);color:#FFD700">Nagpur</span>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px" class="anim3">
         <span class="nav-pill">🪷 BJP</span><span class="nav-pill">✋ INC</span>
         <span class="nav-pill">🏹 SHS</span><span class="nav-pill">🔥 SSUBT</span>
@@ -218,12 +160,77 @@
         <button class="btn btn-primary" onclick="show('s-voter-login')">🗳️ Voter Login</button>
         <button class="btn btn-secondary" onclick="show('s-admin-login')">🔐 Admin / Election Commission</button>
       </div>
+
+      <!-- VALUE PANELS -->
+      <div class="home-panels anim3">
+        <div class="home-panel">
+          <h3 class="panel-title">How It Works</h3>
+          <div class="steps-grid">
+            <div class="step-card">
+              <div class="step-num">01</div>
+              <div class="step-text">Authenticate voter credentials and constituency</div>
+            </div>
+            <div class="step-card">
+              <div class="step-num">02</div>
+              <div class="step-text">Cast a vote for the active election</div>
+            </div>
+            <div class="step-card">
+              <div class="step-num">03</div>
+              <div class="step-text">Vote is mined into a new block with PoW</div>
+            </div>
+            <div class="step-card">
+              <div class="step-num">04</div>
+              <div class="step-text">Results update live from the blockchain</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-panel">
+          <h3 class="panel-title">Security & Integrity</h3>
+          <p class="panel-sub">Built for auditability, tamper detection, and end‑to‑end traceability.</p>
+          <div class="chip-list">
+            <span class="chip">SHA‑256 Hashing</span>
+            <span class="chip">Proof‑of‑Work Mining</span>
+            <span class="chip">MongoDB Atlas</span>
+            <span class="chip">BCrypt Passwords</span>
+            <span class="chip">Immutable Blocks</span>
+            <span class="chip">Admin Validation</span>
+          </div>
+          <div class="callout">
+            First time setup? Login as Admin and click <strong>Seed Maharashtra Data</strong> to load
+            288 VS + 48 LS constituencies and demo voters.
+          </div>
+        </div>
+
+        <div class="home-panel">
+          <h3 class="panel-title">Modules At A Glance</h3>
+          <div class="module-grid">
+            <div class="module-card">
+              <div class="module-title">Voter Portal</div>
+              <div class="module-text">Secure login, ballot selection, and confirmation.</div>
+            </div>
+            <div class="module-card">
+              <div class="module-title">Admin Console</div>
+              <div class="module-text">Elections, constituencies, results, and audits.</div>
+            </div>
+            <div class="module-card">
+              <div class="module-title">Blockchain Ledger</div>
+              <div class="module-text">Immutable record of every vote and block.</div>
+            </div>
+            <div class="module-card">
+              <div class="module-title">Analytics</div>
+              <div class="module-text">Party-wise charts and turnout metrics.</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- ══════════════════ SCREEN: VOTER LOGIN ══════════════════ -->
   <div class="screen" id="s-voter-login">
     <div class="card anim">
+      <div class="card-banner banner-voter-login"><span>Voter Authentication</span></div>
       <h2 class="page-title">Voter Login</h2>
       <p class="page-sub">Enter your Maharashtra Voter ID to access your constituency ballot</p>
       <div class="alert alert-error" id="vl-err"></div>
@@ -244,11 +251,13 @@
   <!-- ══════════════════ SCREEN: VOTER DASHBOARD ══════════════════ -->
   <div class="screen" id="s-voter-dash">
     <div class="card card-md anim">
+      <div class="card-banner banner-voter-dash"><span>Your Elections</span></div>
       <h2 class="page-title" id="vd-welcome">Welcome!</h2>
       <p class="page-sub">Voter ID: <span id="vd-id" style="color:var(--saffron);font-weight:600"></span>
         · <span id="vd-district" style="color:var(--muted)"></span>
         · <span id="vd-division" style="color:var(--muted)"></span></p>
       <div class="section-label">Your Active Elections</div>
+      <div class="alert alert-warn" id="vd-warn"></div>
       <div id="vd-elections" style="margin-bottom:20px"></div>
       <button class="btn btn-secondary" onclick="logout()">🚪 Logout</button>
     </div>
@@ -257,6 +266,7 @@
   <!-- ══════════════════ SCREEN: VOTE CASTING ══════════════════ -->
   <div class="screen" id="s-vote-cast">
     <div class="card card-md anim">
+      <div class="card-banner banner-vote-cast"><span>Cast Your Vote</span></div>
       <h2 class="page-title" id="vc-title">Cast Your Vote</h2>
       <p class="page-sub" id="vc-sub">Loading candidates...</p>
       <div class="alert alert-error" id="vc-err"></div>
@@ -270,6 +280,7 @@
   <!-- ══════════════════ SCREEN: VOTE CONFIRMATION ══════════════════ -->
   <div class="screen" id="s-vote-confirm">
     <div class="card anim">
+      <div class="card-banner banner-vote-confirm"><span>Vote Confirmed</span></div>
       <span class="success-icon">🎉</span>
       <h2 class="page-title" style="text-align:center;margin-top:14px">Vote Cast Successfully!</h2>
       <p class="page-sub" style="text-align:center">Your vote has been mined and recorded on the blockchain</p>
@@ -292,6 +303,7 @@
   <!-- ══════════════════ SCREEN: RESULTS ══════════════════ -->
   <div class="screen top-align" id="s-results">
     <div class="card card-lg anim" style="margin-top:0">
+      <div class="card-banner banner-results"><span>Live Results</span></div>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px">
         <h2 class="page-title" style="margin-bottom:0">📊 Election Results</h2>
         <button class="btn btn-secondary btn-inline" id="res-back" onclick="show('s-voter-dash')">← Back</button>
@@ -313,6 +325,7 @@
   <!-- ══════════════════ SCREEN: ADMIN LOGIN ══════════════════ -->
   <div class="screen" id="s-admin-login">
     <div class="card anim">
+      <div class="card-banner banner-admin-login"><span>Election Commission</span></div>
       <h2 class="page-title">Election Commission Login</h2>
       <p class="page-sub">Maharashtra State Election Authority</p>
       <div class="alert alert-error" id="al-err"></div>
@@ -332,6 +345,7 @@
   <!-- ══════════════════ SCREEN: ADMIN DASHBOARD ══════════════════ -->
   <div class="screen top-align" id="s-admin-dash">
     <div class="card card-xl anim" style="margin:0">
+      <div class="card-banner banner-admin"><span>Command Center</span></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:4px">
         <div>
           <h2 class="page-title" style="margin-bottom:4px">🇮🇳 Maharashtra Election Commission</h2>
@@ -344,30 +358,41 @@
         </div>
       </div>
       <p class="page-sub" id="admin-sub" style="margin-bottom:20px"></p>
+      <div class="admin-alerts" id="admin-alerts"></div>
       <div class="admin-tabs">
         <button class="admin-tab active" onclick="switchTab('overview',this)">📊 Overview</button>
         <button class="admin-tab" onclick="switchTab('elections',this)">🗳️ Elections</button>
         <button class="admin-tab" onclick="switchTab('constituencies',this)">📍 Constituencies</button>
+        <button class="admin-tab" onclick="switchTab('results',this)">🏆 Results</button>
         <button class="admin-tab" onclick="switchTab('blockchain',this)">⛓️ Blockchain</button>
         <button class="admin-tab" onclick="switchTab('voters',this)">👥 Voters</button>
         <button class="admin-tab" onclick="switchTab('register',this)">➕ Register</button>
       </div>
+
       <!-- Overview Tab -->
       <div class="tab-panel active" id="tab-overview">
+        <div class="tab-banner banner-overview"><span>Live Analytics</span></div>
         <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px" id="admin-stats"></div>
+        <!-- Division Stats -->
+        <div class="section-label" style="margin-top:10px">Division-wise Turnout</div>
+        <div class="division-grid" id="division-stats-grid"></div>
         <div id="admin-party-bars" style="margin-bottom:20px"></div>
         <div class="charts-grid">
           <div class="chart-box"><div class="chart-title">Vote Distribution</div><canvas id="adminPie" height="220"></canvas></div>
           <div class="chart-box"><div class="chart-title">Party-wise Comparison</div><canvas id="adminBar" height="220"></canvas></div>
         </div>
       </div>
+
       <!-- Elections Tab -->
       <div class="tab-panel" id="tab-elections">
+        <div class="tab-banner banner-elections"><span>Statewide Elections</span></div>
         <div class="section-label" style="margin-bottom:14px">Active Elections — Maharashtra</div>
         <div id="elections-list"></div>
       </div>
+
       <!-- Constituencies Tab -->
       <div class="tab-panel" id="tab-constituencies">
+        <div class="tab-banner banner-constituencies"><span>Constituency Directory</span></div>
         <div class="section-label" style="margin-bottom:14px">Constituencies — 6 Divisions of Maharashtra</div>
         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
           <select class="form-input" id="const-election-filter" onchange="loadConstituencies()" style="max-width:300px">
@@ -381,14 +406,54 @@
         <div id="const-count" style="font-size:.78rem;color:var(--muted);margin-bottom:10px"></div>
         <div class="const-list" id="const-list-container"></div>
       </div>
+
+      <!-- Results Tab (NEW) -->
+      <div class="tab-panel" id="tab-results">
+        <div class="tab-banner banner-results-tab"><span>Results Drilldown</span></div>
+        <div class="section-label" style="margin-bottom:14px">📊 Election Results & Seat Tally</div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <select class="form-input" id="res-election-filter" onchange="loadAdminResults()" style="max-width:300px">
+            <option value="">Select Election</option>
+          </select>
+        </div>
+        <div id="seat-tally-container" style="margin-bottom:24px"></div>
+        <div class="section-label">Division-wise Results</div>
+        <div class="division-grid" id="division-results-grid"></div>
+        <div class="section-label" style="margin-top:20px">Constituency Drilldown</div>
+        <div class="search-box"><input id="res-const-search" placeholder="Search constituency for results..." oninput="filterResultConstituencies()"/></div>
+        <div class="const-list" id="res-const-list" style="max-height:500px"></div>
+        <!-- Constituency Drilldown Modal -->
+        <div class="modal-overlay" id="constResultModal">
+          <div class="modal-card card card-md">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <h3 class="page-title" id="modal-const-title" style="margin-bottom:0;font-size:1.3rem"></h3>
+              <button class="btn btn-secondary btn-inline" onclick="closeConstModal()" style="padding:6px 14px;font-size:.8rem">✕ Close</button>
+            </div>
+            <div id="modal-const-body"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Blockchain Tab -->
       <div class="tab-panel" id="tab-blockchain">
+        <div class="tab-banner banner-blockchain"><span>Blockchain Ledger</span></div>
         <div class="section-label" style="margin-bottom:14px">Blockchain Timeline — from MongoDB</div>
         <div class="chain-wrap" id="chain-timeline"></div>
       </div>
+
       <!-- Voters Tab -->
       <div class="tab-panel" id="tab-voters">
+        <div class="tab-banner banner-voters"><span>Voter Registry</span></div>
         <div class="section-label" style="margin-bottom:14px">Registered Voters — Maharashtra</div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="search-box" style="flex:1;margin-bottom:0"><input id="voter-search" placeholder="Search voter by ID or name..." oninput="searchVoters()"/></div>
+          <select class="form-input" id="voter-div-filter" onchange="searchVoters()" style="max-width:200px">
+            <option value="">All Divisions</option>
+            <option>Konkan</option><option>Pune</option><option>Nashik</option>
+            <option>Chh. Sambhajinagar</option><option>Amravati</option><option>Nagpur</option>
+          </select>
+        </div>
+        <div id="voter-count" style="font-size:.78rem;color:var(--muted);margin-bottom:10px"></div>
         <div style="overflow-x:auto">
           <table class="vtable">
             <thead><tr><th>Voter ID</th><th>Name</th><th>District</th><th>Division</th><th>VS Const.</th><th>Status</th></tr></thead>
@@ -396,8 +461,10 @@
           </table>
         </div>
       </div>
+
       <!-- Register Tab -->
       <div class="tab-panel" id="tab-register">
+        <div class="tab-banner banner-register"><span>New Voter Enrollment</span></div>
         <div class="section-label" style="margin-bottom:14px">Register New Voter — Maharashtra</div>
         <div class="reg-box">
           <div class="alert alert-error" id="reg-err"></div>
@@ -406,11 +473,15 @@
             <div class="form-group"><label class="form-label">Voter ID</label><input class="form-input" id="reg-id" placeholder="e.g. MH031"/></div>
             <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="reg-name" placeholder="Full Name"/></div>
             <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="reg-pw" type="password" placeholder="Password"/></div>
-            <div class="form-group"><label class="form-label">District</label><input class="form-input" id="reg-district" placeholder="e.g. Pune"/></div>
             <div class="form-group"><label class="form-label">Division</label>
-              <select class="form-input" id="reg-division"><option value="">Select</option><option>Konkan</option><option>Pune</option><option>Nashik</option><option>Chh. Sambhajinagar</option><option>Amravati</option><option>Nagpur</option></select>
+              <select class="form-input" id="reg-division" onchange="onRegDivisionChange()"><option value="">Select Division</option><option>Konkan</option><option>Pune</option><option>Nashik</option><option>Chh. Sambhajinagar</option><option>Amravati</option><option>Nagpur</option></select>
             </div>
-            <div class="form-group"><label class="form-label">VS Constituency ID</label><input class="form-input" id="reg-vs" placeholder="e.g. VS-118"/></div>
+            <div class="form-group"><label class="form-label">District</label>
+              <select class="form-input" id="reg-district" onchange="onRegDistrictChange()"><option value="">Select District</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">VS Constituency</label>
+              <select class="form-input" id="reg-vs"><option value="">Select VS Constituency</option></select>
+            </div>
           </div>
           <button class="btn btn-primary btn-inline" onclick="registerVoter()" style="margin-top:12px">Register Voter</button>
         </div>
@@ -418,458 +489,6 @@
     </div>
   </div>
 
-  <!-- ══════════════════ JAVASCRIPT ══════════════════ -->
-  <script>
-
-    // ═══════════════════════════════════════════════════════
-    //  CONFIG
-    //  - Default API points to local Spark server
-    //  - Can be overridden via ?api=http://host:port on the URL
-    // ═══════════════════════════════════════════════════════
-    const urlParams = new URLSearchParams(window.location.search);
-    const apiOverride = urlParams.get('api');
-    const API = apiOverride || 'http://localhost:4567';
-
-    // ═══════════════════════════════════════════════════════
-    //  API HELPER
-    // ═══════════════════════════════════════════════════════
-    async function api(method, path, body) {
-      const opts = { method, headers: { 'Content-Type': 'application/json' },
-        ...(body ? { body: JSON.stringify(body) } : {}) };
-      const res = await fetch(API + path, opts);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Request failed');
-      return data;
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  SERVER HEALTH CHECK
-    // ═══════════════════════════════════════════════════════
-    async function checkServer() {
-      const banner = document.getElementById('serverBanner');
-      const msg = document.getElementById('serverMsg');
-      try {
-        await fetch(API + '/api/results', { method: 'GET' });
-        banner.className = 'server-banner server-ok';
-        msg.textContent = '✅ Server connected — Maharashtra Edition';
-      } catch {
-        banner.className = 'server-banner server-err';
-        msg.textContent = '❌ Server offline — start Java backend first';
-      }
-    }
-    checkServer(); setInterval(checkServer, 5000);
-
-    // ═══════════════════════════════════════════════════════
-    //  STATE
-    // ═══════════════════════════════════════════════════════
-    let currentVoter = null;
-    let voterData = null;
-    let selectedCand = null;
-    let currentElection = null;
-    let currentConstituency = null;
-    let constituenciesCache = [];
-    let pieInst = null, barInst = null, adminPieInst = null, adminBarInst = null;
-
-    const PARTY_COLORS = {
-      'BJP':'#FF9933','INC':'#00BFFF','SHS':'#FF6600','SSUBT':'#F57C00',
-      'NCP':'#004D40','NCPSP':'#1B5E20','BSP':'#2196F3','MNS':'#FF5722',
-      'VBA':'#9C27B0','IND':'#9E9E9E','NOTA':'#F44336'
-    };
-    const COLORS = Object.values(PARTY_COLORS);
-
-    // ═══════════════════════════════════════════════════════
-    //  SCREEN ROUTING
-    // ═══════════════════════════════════════════════════════
-    function show(id) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-      window.scrollTo(0, 0);
-    }
-    function updateNav(label) {
-      const r = document.getElementById('navRight');
-      if (label) { r.style.display = 'flex'; document.getElementById('navPill').textContent = label; }
-      else r.style.display = 'none';
-    }
-    function logout() {
-      currentVoter = null; voterData = null; selectedCand = null;
-      currentElection = null; currentConstituency = null;
-      updateNav(null); show('s-home');
-    }
-    function showErr(id, msg) {
-      const el = document.getElementById(id);
-      el.textContent = msg; el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), 5000);
-    }
-    function showOverlay(t) { document.getElementById('overlayText').textContent = t; document.getElementById('overlay').classList.add('show'); }
-    function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
-
-    // ═══════════════════════════════════════════════════════
-    //  VOTER LOGIN
-    // ═══════════════════════════════════════════════════════
-    async function voterLogin() {
-      const voterId = document.getElementById('vl-id').value.trim().toUpperCase();
-      const password = document.getElementById('vl-pw').value;
-      if (!voterId || !password) return showErr('vl-err', 'Enter Voter ID and Password');
-      showOverlay('Authenticating...');
-      try {
-        const data = await api('POST', '/api/voter/login', { voterId, password });
-        currentVoter = data.voterId;
-        voterData = data;
-        updateNav('🗳️ ' + data.voterId + ' · ' + (data.district || ''));
-        await loadVoterDash();
-        show('s-voter-dash');
-      } catch (e) { showErr('vl-err', e.message); }
-      finally { hideOverlay(); }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  VOTER DASHBOARD — shows active elections
-    // ═══════════════════════════════════════════════════════
-    async function loadVoterDash() {
-      document.getElementById('vd-welcome').textContent = 'Welcome, ' + (voterData.name || currentVoter) + '!';
-      document.getElementById('vd-id').textContent = currentVoter;
-      document.getElementById('vd-district').textContent = voterData.district || '';
-      document.getElementById('vd-division').textContent = voterData.division || '';
-
-      try {
-        const data = await api('GET', '/api/voter/elections?voterId=' + currentVoter);
-        const el = document.getElementById('vd-elections');
-        if (!data.elections || data.elections.length === 0) {
-          el.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">No active elections. Ask admin to seed Maharashtra data first.</div>';
-          return;
-        }
-        el.innerHTML = data.elections.map(e => `
-          <div class="election-card ${e.hasVoted ? '' : 'active-election'}" onclick="${e.hasVoted ? `loadResults('${e.electionId}','voter')` : `startVoting('${e.electionId}','${e.constituencyId}','${e.type}')`}">
-            <img class="election-visual" src="${e.type === 'VIDHAN_SABHA' ? './assets/vidhan-sabha.svg' : './assets/lok-sabha.svg'}" alt="${e.type === 'VIDHAN_SABHA' ? 'Vidhan Sabha election visual' : 'Lok Sabha election visual'}"/>
-            <h3>${e.title}</h3>
-            <p>${e.type === 'VIDHAN_SABHA' ? 'MLA — Vidhan Sabha' : 'MP — Lok Sabha'} · Constituency: <strong style="color:var(--saffron)">${e.constituencyId || 'N/A'}</strong></p>
-            <span class="status-badge ${e.hasVoted ? 'badge-completed' : 'badge-active'}" style="margin-top:8px">${e.hasVoted ? '✅ Voted' : '🗳️ Vote Now'}</span>
-          </div>
-        `).join('');
-      } catch (e) {
-        document.getElementById('vd-elections').innerHTML = '<div class="alert alert-error show">' + e.message + '</div>';
-      }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  START VOTING — load candidates for constituency
-    // ═══════════════════════════════════════════════════════
-    async function startVoting(electionId, constituencyId, type) {
-      currentElection = electionId;
-      currentConstituency = constituencyId;
-      selectedCand = null;
-      showOverlay('Loading ballot for ' + constituencyId + '...');
-      try {
-        const data = await api('GET', '/api/constituencies/' + constituencyId);
-        document.getElementById('vc-title').textContent = 'Cast Your Vote — ' + data.name;
-        document.getElementById('vc-sub').textContent =
-          `${type === 'VIDHAN_SABHA' ? 'Vidhan Sabha (MLA)' : 'Lok Sabha (MP)'} · #${data.number} · ${data.district}, ${data.division} · ${data.reservationCategory !== 'GENERAL' ? '(' + data.reservationCategory + ' Reserved)' : 'General'}`;
-        document.getElementById('vc-const-label').textContent = data.candidates.length + ' Candidates';
-
-        const list = document.getElementById('vc-cand-list');
-        list.innerHTML = data.candidates.map((c, i) => `
-          <div class="cand-card" id="cc-${i}" onclick="selectCandidate(${i},'${c.candidateId}','${c.name.replace(/'/g,"\\'")}','${c.party}')">
-            <span class="cand-symbol">${c.symbol}</span>
-            <div class="cand-info">
-              <div class="cand-name">${c.name}</div>
-              <div class="cand-party" style="color:${c.color}">${c.partyFull} (${c.party})</div>
-            </div>
-            <div class="cand-radio"><div class="cand-dot"></div></div>
-          </div>
-        `).join('');
-        show('s-vote-cast');
-      } catch (e) { alert('Error: ' + e.message); }
-      finally { hideOverlay(); }
-    }
-
-    function selectCandidate(idx, candidateId, name, party) {
-      selectedCand = { idx, candidateId, name, party };
-      document.querySelectorAll('#vc-cand-list .cand-card').forEach((c, i) => {
-        c.classList.toggle('selected', i === idx);
-      });
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  SUBMIT VOTE — with election + constituency context
-    // ═══════════════════════════════════════════════════════
-    async function submitVote() {
-      if (!selectedCand) return showErr('vc-err', 'Please select a candidate');
-      showOverlay('Mining vote block on blockchain...');
-      try {
-        const data = await api('POST', '/api/voter/cast-vote-election', {
-          voterId: currentVoter, candidateName: selectedCand.name,
-          candidateId: selectedCand.candidateId, party: selectedCand.party,
-          electionId: currentElection, constituencyId: currentConstituency
-        });
-        document.getElementById('cf-voter').textContent = currentVoter;
-        document.getElementById('cf-election').textContent = currentElection;
-        document.getElementById('cf-const').textContent = currentConstituency;
-        document.getElementById('cf-cand').textContent = selectedCand.name + ' (' + selectedCand.party + ')';
-        document.getElementById('cf-index').textContent = data.blockIndex;
-        document.getElementById('cf-hash').textContent = data.currentHash ? data.currentHash.substring(0, 24) + '...' : '–';
-        document.getElementById('cf-time').textContent = data.miningTime + ' ms';
-        show('s-vote-confirm');
-      } catch (e) { showErr('vc-err', e.message); }
-      finally { hideOverlay(); }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  RESULTS
-    // ═══════════════════════════════════════════════════════
-    async function loadResults(electionId, from) {
-      showOverlay('Loading results...');
-      try {
-        const data = await api('GET', '/api/results/election?electionId=' + electionId);
-        document.getElementById('res-sub').textContent = data.totalVotes + ' total votes — ' + electionId;
-        document.getElementById('res-back').onclick = () => from === 'admin' ? show('s-admin-dash') : show('s-voter-dash');
-
-        // Party bars
-        const partyEntries = Object.entries(data.partyResults || {}).sort((a, b) => b[1] - a[1]);
-        const maxVotes = partyEntries.length > 0 ? partyEntries[0][1] : 1;
-        document.getElementById('party-bars').innerHTML = partyEntries.map(([party, count]) => `
-          <div class="party-bar">
-            <div class="party-bar-name">${party}</div>
-            <div class="party-bar-fill"><div class="party-bar-inner" style="width:${(count/maxVotes*100).toFixed(1)}%;background:${PARTY_COLORS[party]||'#666'}"></div></div>
-            <div class="party-bar-count">${count}</div>
-          </div>
-        `).join('');
-
-        // Leader
-        const entries = Object.entries(data.results || {});
-        if (entries.length > 0) {
-          const leader = entries.reduce((a, b) => b[1] > a[1] ? b : a);
-          document.getElementById('leader-box').style.display = 'block';
-          document.getElementById('leader-name').textContent = leader[0];
-          document.getElementById('leader-votes').textContent = leader[1] + ' votes';
-        }
-
-        // Charts
-        const labels = entries.map(([k]) => k.length > 20 ? k.substring(0, 20) + '...' : k);
-        const vals = entries.map(([, v]) => v);
-        const colors = entries.map(([k]) => { const e = partyEntries.find(p => k.includes(p[0])); return e ? PARTY_COLORS[e[0]] : COLORS[entries.indexOf(entries.find(x => x[0] === k)) % COLORS.length]; });
-        if (pieInst) pieInst.destroy(); if (barInst) barInst.destroy();
-        Chart.defaults.color = 'rgba(238,238,245,0.5)';
-        pieInst = new Chart(document.getElementById('pieChart').getContext('2d'), {
-          type: 'doughnut', data: { labels, datasets: [{ data: vals, backgroundColor: COLORS.slice(0, vals.length), borderColor: 'rgba(7,7,15,0.8)', borderWidth: 3 }] },
-          options: { plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } }, cutout: '55%' }
-        });
-        barInst = new Chart(document.getElementById('barChart').getContext('2d'), {
-          type: 'bar', data: { labels: partyEntries.map(p => p[0]), datasets: [{ label: 'Votes', data: partyEntries.map(p => p[1]), backgroundColor: partyEntries.map(p => PARTY_COLORS[p[0]] || '#666'), borderRadius: 6, borderSkipped: false }] },
-          options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { stepSize: 1 } } } }
-        });
-        show('s-results');
-      } catch (e) { alert('Results error: ' + e.message); }
-      finally { hideOverlay(); }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  ADMIN LOGIN
-    // ═══════════════════════════════════════════════════════
-    async function adminLogin() {
-      const username = document.getElementById('al-user').value.trim();
-      const password = document.getElementById('al-pw').value;
-      if (!username || !password) return showErr('al-err', 'Enter credentials');
-      showOverlay('Authenticating...');
-      try {
-        await api('POST', '/api/admin/login', { username, password });
-        updateNav('🔐 Election Commission');
-        await loadAdminDashboard();
-        show('s-admin-dash');
-      } catch (e) { showErr('al-err', e.message); }
-      finally { hideOverlay(); }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  SEED MAHARASHTRA DATA
-    // ═══════════════════════════════════════════════════════
-    async function seedMaharashtra() {
-      if (!confirm('This will seed all 288 Vidhan Sabha + 48 Lok Sabha constituencies + 30 demo voters. Continue?')) return;
-      showOverlay('Seeding Maharashtra electoral data...\n288 VS + 48 LS constituencies');
-      try {
-        const data = await api('POST', '/api/admin/seed-maharashtra');
-        alert('✅ ' + data.message);
-        await loadAdminDashboard();
-      } catch (e) { alert('Seed error: ' + e.message); }
-      finally { hideOverlay(); }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  ADMIN DASHBOARD
-    // ═══════════════════════════════════════════════════════
-    async function loadAdminDashboard() {
-      showOverlay('Loading admin dashboard...');
-      try {
-        const [chainData, voterData, resultsData, electionsData] = await Promise.all([
-          api('GET', '/api/admin/blockchain'),
-          api('GET', '/api/admin/voters'),
-          api('GET', '/api/results'),
-          api('GET', '/api/elections'),
-        ]);
-
-        // Badge
-        const badge = document.getElementById('chain-badge');
-        badge.className = 'status-badge ' + (chainData.isValid ? 'badge-secure' : 'badge-tampered');
-        badge.textContent = chainData.isValid ? '🔒 Blockchain Secure' : '⚠️ Tampered';
-
-        const tv = resultsData.totalVotes;
-        const vc = voterData.voters.length;
-        const ec = electionsData.elections ? electionsData.elections.length : 0;
-        document.getElementById('admin-sub').textContent = chainData.totalBlocks + ' blocks · ' + tv + ' votes · ' + vc + ' voters · ' + ec + ' elections';
-
-        const turnout = vc > 0 ? Math.round(tv / vc * 100) : 0;
-        document.getElementById('admin-stats').innerHTML =
-          [{ n: tv, l: 'Total Votes' }, { n: vc, l: 'Registered Voters' }, { n: chainData.totalBlocks, l: 'Blocks Mined' }, { n: turnout + '%', l: 'Voter Turnout' }]
-            .map(s => `<div class="stat-box"><div class="stat-num">${s.n}</div><div class="stat-lbl">${s.l}</div></div>`).join('');
-
-        // Charts
-        const entries = Object.entries(resultsData.results || {});
-        if (adminPieInst) adminPieInst.destroy();
-        if (adminBarInst) adminBarInst.destroy();
-        if (entries.length === 0) {
-          document.querySelector('#tab-overview .charts-grid').innerHTML = `
-            <div class="chart-box" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px"><span style="font-size:2.5rem">🗳️</span><div style="color:var(--saffron);font-weight:600;font-size:.9rem">No Votes Yet</div></div>
-            <div class="chart-box" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px"><span style="font-size:2.5rem">📊</span><div style="color:var(--saffron);font-weight:600;font-size:.9rem">No Data</div></div>`;
-        } else {
-          const grid = document.querySelector('#tab-overview .charts-grid');
-          if (!document.getElementById('adminPie')) {
-            grid.innerHTML = `<div class="chart-box"><div class="chart-title">Vote Distribution</div><canvas id="adminPie" height="220"></canvas></div>
-              <div class="chart-box"><div class="chart-title">Comparison</div><canvas id="adminBar" height="220"></canvas></div>`;
-          }
-          const labels = entries.map(([k]) => k.length > 15 ? k.substring(0, 15) + '..' : k);
-          const vals = entries.map(([, v]) => v);
-          Chart.defaults.color = 'rgba(238,238,245,0.6)';
-          adminPieInst = new Chart(document.getElementById('adminPie').getContext('2d'), {
-            type: 'doughnut', data: { labels, datasets: [{ data: vals, backgroundColor: COLORS.slice(0, vals.length), borderColor: 'rgba(7,7,15,0.8)', borderWidth: 3 }] },
-            options: { plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } }, cutout: '55%' }
-          });
-          adminBarInst = new Chart(document.getElementById('adminBar').getContext('2d'), {
-            type: 'bar', data: { labels, datasets: [{ label: 'Votes', data: vals, backgroundColor: COLORS.slice(0, vals.length), borderRadius: 6, borderSkipped: false }] },
-            options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.06)' } }, y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { stepSize: 1 } } } }
-          });
-        }
-
-        // Elections tab
-        if (electionsData.elections) {
-          document.getElementById('elections-list').innerHTML = electionsData.elections.map(e => `
-            <div class="election-card">
-              <img class="election-visual" src="${e.type === 'VIDHAN_SABHA' ? './assets/vidhan-sabha.svg' : './assets/lok-sabha.svg'}" alt="${e.type} election visual"/>
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <div><h3>${e.title}</h3><p>${e.type} · ${e.totalSeats} seats · ${e.startDate} to ${e.endDate}</p></div>
-                <span class="status-badge badge-${e.status.toLowerCase()}">${e.status}</span>
-              </div>
-            </div>
-          `).join('');
-          // Populate const filter
-          const sel = document.getElementById('const-election-filter');
-          sel.innerHTML = '<option value="">Select Election</option>' + electionsData.elections.map(e => `<option value="${e.electionId}">${e.title} (${e.totalSeats})</option>`).join('');
-        }
-
-        // Division filter
-        try {
-          const divData = await api('GET', '/api/divisions');
-          const divSel = document.getElementById('const-division-filter');
-          divSel.innerHTML = '<option value="">All Divisions</option>' + divData.divisions.map(d => `<option value="${d.name}">${d.name} (${d.districts.length} districts)</option>`).join('');
-        } catch {}
-
-        // Blockchain timeline
-        document.getElementById('chain-timeline').innerHTML = chainData.blocks.map((b, i) => `
-          <div class="chain-item">
-            <div class="chain-connector">
-              <div class="chain-dot ${b.index === 0 ? 'genesis' : ''}"></div>
-              ${i < chainData.blocks.length - 1 ? '<div class="chain-line"></div>' : ''}
-            </div>
-            <div class="chain-card">
-              <div class="chain-title">${b.index === 0 ? '🌱 Genesis Block' : 'Block #' + b.index}
-                <span style="font-weight:400;color:var(--muted);font-size:.68rem;margin-left:8px">${b.timestamp}</span></div>
-              ${b.index > 0 ? `<div class="chain-meta"><span>Candidate</span><span style="color:var(--saffron)">${b.candidateName}</span></div>
-                <div class="chain-meta"><span>Nonce</span><span>${b.nonce}</span></div>
-                <div class="chain-meta"><span>Mining</span><span>${b.miningTime}ms</span></div>` : ''}
-              <div class="chain-hash">🔑 ${b.currentHash}</div>
-              ${b.index > 0 ? `<div class="chain-hash prev">🔗 ${b.previousHash}</div>` : ''}
-            </div>
-          </div>`).join('');
-
-        // Voters table
-        document.getElementById('voter-tbody').innerHTML = voterData.voters.map(v => `
-          <tr>
-            <td><strong style="color:var(--saffron)">${v.voterId}</strong></td>
-            <td>${v.name || '—'}</td>
-            <td style="font-size:.78rem">${v.district || '—'}</td>
-            <td style="font-size:.78rem">${v.division || '—'}</td>
-            <td style="font-size:.72rem;color:var(--muted)">${v.constituencyVS || '—'}</td>
-            <td><span class="voted-chip ${v.hasVoted ? 'chip-yes' : 'chip-no'}">${v.hasVoted ? '✅ Voted' : '⏳ Pending'}</span></td>
-          </tr>`).join('');
-
-      } catch (e) { alert('Dashboard error: ' + e.message); }
-      finally { hideOverlay(); }
-    }
-
-    function refreshAdmin() { loadAdminDashboard(); }
-    function switchTab(name, btn) {
-      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + name).classList.add('active');
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  CONSTITUENCIES
-    // ═══════════════════════════════════════════════════════
-    async function loadConstituencies() {
-      const electionId = document.getElementById('const-election-filter').value;
-      const division = document.getElementById('const-division-filter').value;
-      if (!electionId) { document.getElementById('const-list-container').innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">Select an election first</div>'; return; }
-      try {
-        let url = '/api/constituencies?electionId=' + electionId;
-        if (division) url += '&division=' + encodeURIComponent(division);
-        const data = await api('GET', url);
-        constituenciesCache = data.constituencies || [];
-        renderConstituencies(constituenciesCache);
-      } catch (e) { alert(e.message); }
-    }
-
-    function renderConstituencies(list) {
-      document.getElementById('const-count').textContent = list.length + ' constituencies';
-      document.getElementById('const-list-container').innerHTML = list.map(c => {
-        const tagClass = c.reservationCategory === 'SC' ? 'tag-sc' : c.reservationCategory === 'ST' ? 'tag-st' : 'tag-gen';
-        return `<div class="const-item">
-          <span class="const-num">#${c.number}</span>
-          <span class="const-name">${c.name}</span>
-          <span class="const-district">${c.district}</span>
-          <span class="reservation-tag ${tagClass}">${c.reservationCategory}</span>
-        </div>`;
-      }).join('');
-    }
-
-    function filterConstituencies() {
-      const q = document.getElementById('const-search').value.toLowerCase();
-      const filtered = constituenciesCache.filter(c => c.name.toLowerCase().includes(q) || c.district.toLowerCase().includes(q));
-      renderConstituencies(filtered);
-    }
-
-    // ═══════════════════════════════════════════════════════
-    //  REGISTER VOTER
-    // ═══════════════════════════════════════════════════════
-    async function registerVoter() {
-      const voterId = document.getElementById('reg-id').value.trim();
-      const name = document.getElementById('reg-name').value.trim();
-      const password = document.getElementById('reg-pw').value;
-      const district = document.getElementById('reg-district').value.trim();
-      const division = document.getElementById('reg-division').value;
-      const vs = document.getElementById('reg-vs').value.trim();
-      const errEl = document.getElementById('reg-err');
-      const okEl = document.getElementById('reg-ok');
-      errEl.classList.remove('show'); okEl.classList.remove('show');
-      if (!voterId || !name || !password) { errEl.textContent = 'ID, Name & Password required'; errEl.classList.add('show'); return; }
-      try {
-        await api('POST', '/api/admin/register-voter', { voterId, name, password });
-        okEl.textContent = '✅ Voter ' + voterId.toUpperCase() + ' registered!';
-        okEl.classList.add('show');
-        ['reg-id','reg-name','reg-pw','reg-district','reg-vs'].forEach(id => document.getElementById(id).value = '');
-        loadAdminDashboard();
-      } catch (e) { errEl.textContent = '❌ ' + e.message; errEl.classList.add('show'); }
-    }
-
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
