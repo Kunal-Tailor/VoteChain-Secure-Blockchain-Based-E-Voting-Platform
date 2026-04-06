@@ -1,306 +1,171 @@
-# Online Voting System using Blockchain Technology
+# VoteChain: Secure Blockchain-Based E-Voting Platform 🗳️
 
-A complete, college-level end-to-end project implementing a secure online voting system using blockchain concepts in Java with JavaFX UI.
-
-## 📋 Project Overview
-
-This project implements a blockchain-based voting system that ensures:
-- **One vote per voter** - Prevents duplicate voting
-- **Immutable votes** - Once cast, votes cannot be modified
-- **Tamper detection** - Any modification to the blockchain is detected
-- **Transparent results** - Results calculated by traversing the blockchain
-
-## 🏗️ Architecture
-
-The project follows a **layered architecture** with clear separation of concerns:
-
-```
-src/main/java/com/votingsystem/
-├── ui/           → JavaFX frontend screens
-├── service/      → Business logic layer
-├── model/        → Blockchain core (Block, Blockchain)
-├── security/     → SHA-256 hashing utilities
-├── storage/      → File persistence layer
-├── integration/  → External blockchain connectivity (GetBlock JSON-RPC)
-└── Main.java     → Application entry point
-```
-
-## 🔑 Key Features
-
-### Voter Module
-- ✅ Voter login using Voter ID and password
-- ✅ One vote per voter (no duplicate voting)
-- ✅ Select candidate and cast vote
-- ✅ Vote once → cannot modify
-- ✅ View election results
-
-### Admin Module
-- ✅ Admin login
-- ✅ View live election results
-- ✅ Validate blockchain integrity
-- ✅ Detect tampering attempts
-- ✅ Test live connection to external blockchain node (GetBlock)
-
-### Blockchain & Security
-- ✅ Each vote stored as a block
-- ✅ SHA-256 hashing for block integrity
-- ✅ Genesis block implementation
-- ✅ Chain validation (previous hash linking)
-- ✅ Tamper detection mechanism
-- ✅ External node connectivity check using Ethereum JSON-RPC (`eth_blockNumber`) via GetBlock
-
-## 🛠️ Technology Stack
-
-- **Java** (Core Java)
-- **JavaFX** (UI Framework)
-- **SHA-256** (Cryptographic Hashing)
-- **File I/O** (Persistence)
-- **HTTP + JSON-RPC** (External node integration via GetBlock)
-
-## 📦 Project Structure
-
-```
-MPJ/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/
-│   │   │       └── votingsystem/
-│   │   │           ├── ui/              # JavaFX UI Screens
-│   │   │           │   ├── HomeScreen.java
-│   │   │           │   ├── VoterLoginScreen.java
-│   │   │           │   ├── VoterDashboardScreen.java
-│   │   │           │   ├── VoteCastingScreen.java
-│   │   │           │   ├── VoteConfirmationScreen.java
-│   │   │           │   ├── VoterResultsScreen.java
-│   │   │           │   ├── AdminLoginScreen.java
-│   │   │           │   └── AdminDashboardScreen.java
-│   │   │           ├── service/         # Business Logic
-│   │   │           │   ├── BlockchainService.java
-│   │   │           │   ├── VoterService.java
-│   │   │           │   └── AdminService.java
-│   │   │           ├── model/           # Blockchain Core
-│   │   │           │   ├── Block.java
-│   │   │           │   └── Blockchain.java
-│   │   │           ├── security/        # Hashing
-│   │   │           │   └── HashUtil.java
-│   │   │           ├── storage/         # File Handling
-│   │   │           │   └── FileStorage.java
-│   │   │           ├── integration/     # External Blockchain Integration
-│   │   │           │   └── GetBlockClient.java
-│   │   │           └── Main.java
-│   │   └── resources/
-│   │       └── css/
-│   │           └── styles.css
-└── README.md
-```
-
-## 🚀 How to Run
-
-### Prerequisites
-- Java JDK 11 or higher
-- JavaFX SDK (JDK 11+ does NOT always include JavaFX; on many systems you must install JavaFX separately)
-
-### Running the Application
-
-1. **Compile the project (with JavaFX SDK):**
-   ```bash
-   cd /Users/kunaltailor/Desktop/Kunal/MPJ
-   javac -d out \
-     --module-path /path/to/javafx/lib \
-     --add-modules javafx.controls,javafx.fxml \
-     -cp src/main/resources \
-     src/main/java/com/votingsystem/**/*.java
-   ```
-
-2. **Run the application (with JavaFX SDK):**
-   ```bash
-   java \
-     --module-path /path/to/javafx/lib \
-     --add-modules javafx.controls,javafx.fxml \
-     -cp out:src/main/resources \
-     com.votingsystem.Main
-   ```
-
-   **For macOS/Linux (if JavaFX is in JDK):**
-   ```bash
-   java -cp out com.votingsystem.Main
-   ```
-
-   **For Windows:**
-   ```bash
-   java -cp out com.votingsystem.Main
-   ```
-
-### Running the REST API (for Web UI)
-The web interface (`voting_index.html`) talks to the REST API on port `4567`.
-
-1. Set MongoDB Atlas connection string:
-   ```bash
-   export MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>/<db>?retryWrites=true&w=majority"
-   ```
-
-2. Optional: auto-seed Maharashtra data on first run:
-   ```bash
-   export AUTO_SEED=true
-   ```
-
-3. Build and run the API server:
-   ```bash
-   mvn -q -DskipTests package
-   java -jar target/MPJ-1.0.jar
-   ```
-
-### Run API + Desktop Together
-```bash
-./build.sh
-java -cp out:src/main/resources com.votingsystem.api.ApiMain
-```
-
-### Using an IDE (Recommended)
-
-1. **IntelliJ IDEA / Eclipse:**
-   - Import the project
-   - Ensure JavaFX is configured
-   - Run `Main.java`
-
-2. **VS Code:**
-   - Install Java Extension Pack
-   - Install JavaFX Extension
-   - Run `Main.java`
-
-## 👤 Default Credentials
-
-### Voters
-- **Voter ID:** V001, **Password:** voter1
-- **Voter ID:** V002, **Password:** voter2
-- **Voter ID:** V003, **Password:** voter3
-- **Voter ID:** V004, **Password:** voter4
-- **Voter ID:** V005, **Password:** voter5
-
-### Admin
-- **Username:** admin
-- **Password:** admin123
-
-## 🔐 Blockchain Implementation Details
-
-### Block Structure
-Each block contains:
-- **Index:** Position in the chain
-- **Voter ID:** Who cast the vote
-- **Candidate Name:** Selected candidate
-- **Timestamp:** When the vote was cast
-- **Previous Hash:** Hash of the previous block
-- **Current Hash:** SHA-256 hash of this block
-
-### Hash Calculation
-```
-Hash = SHA-256(Index + VoterID + CandidateName + Timestamp + PreviousHash)
-```
-
-### Chain Validation
-The system validates:
-1. Each block's hash matches its calculated hash
-2. Each block's previousHash matches the previous block's currentHash
-3. Genesis block is present and valid
-
-## 📊 Features Explained
-
-### 1. One Vote Per Voter
-- System tracks all voted Voter IDs
-- Attempting to vote twice throws an exception
-- Voters who already voted are redirected to results
-
-### 2. Immutable Votes
-- Once a vote is added to the blockchain, it cannot be modified
-- Any modification breaks the chain integrity
-- Admin can detect tampering through validation
-
-### 3. Results Calculation
-- Results are calculated by traversing the blockchain
-- Each vote block is counted
-- Percentages are calculated dynamically
-
-### 4. File Persistence
-- Blockchain is saved to `blockchain.dat`
-- Voter credentials saved to `voters.dat`
-- Data persists between application runs
-
-## 🎨 UI Screens
-
-1. **Home Screen** - Choose Voter or Admin login
-2. **Voter Login** - Authenticate with Voter ID and password
-3. **Voter Dashboard** - Cast vote or view results
-4. **Vote Casting** - Select candidate using radio buttons
-5. **Vote Confirmation** - Confirm successful vote
-6. **Results Display** - View election results
-7. **Admin Login** - Authenticate admin
-8. **Admin Dashboard** - View results (charts), blockchain timeline, validate chain, detect tampering, test GetBlock connection
-
-## 🌐 GetBlock Integration (External Blockchain Connectivity)
-
-This project includes a lightweight integration with **GetBlock** to demonstrate live blockchain connectivity.
-
-### What it does
-- The Admin Dashboard includes a button: **“🌐 Test GetBlock Connection”**
-- When clicked, the system calls Ethereum JSON-RPC method `eth_blockNumber` via your configured GetBlock endpoint.
-- It displays the latest on-chain block number in a popup.
-
-### Where it is implemented
-- **Client**: `src/main/java/com/votingsystem/integration/GetBlockClient.java`
-- **Service**: `src/main/java/com/votingsystem/service/AdminService.java`
-- **UI Button**: `src/main/java/com/votingsystem/ui/AdminDashboardScreen.java`
-
-### How to test (demo steps)
-1. Run the application
-2. Login as Admin (`admin` / `admin123`)
-3. Click **“🌐 Test GetBlock Connection”**
-4. You should see a popup showing the latest block number from the external blockchain node
-
-### Note
-- The endpoint must be an **Ethereum-compatible HTTP JSON-RPC** endpoint. The code calls `eth_blockNumber`.
-- Treat your GetBlock URL as sensitive (don’t publish it publicly).
-
-## 🔍 Viva Questions & Answers
-
-### Q: How does blockchain ensure vote security?
-**A:** Each block contains a hash of the previous block. If any block is modified, its hash changes, breaking the chain. The system validates the entire chain to detect tampering.
-
-### Q: How is SHA-256 used?
-**A:** SHA-256 calculates a unique hash for each block based on its data. This hash is used to link blocks and detect modifications.
-
-### Q: How do you prevent duplicate voting?
-**A:** The system maintains a map of voted Voter IDs. Before adding a vote, it checks if the Voter ID already exists in the map.
-
-### Q: What is the Genesis Block?
-**A:** The first block in the chain (index 0) with no previous block. It serves as the starting point of the blockchain.
-
-### Q: How are results calculated?
-**A:** The system traverses all blocks (excluding genesis), counts votes for each candidate, and calculates percentages.
-
-## 📝 Notes
-
-- This is a **simulated blockchain** (not cryptocurrency-based)
-- Data is stored locally in files
-- Suitable for educational/demonstration purposes
-- Can be extended with network features for distributed voting
-
-## 🎓 Educational Value
-
-This project demonstrates:
-- Object-Oriented Programming (OOP)
-- Layered Architecture
-- Data Structures (Lists, Maps)
-- File I/O Operations
-- Cryptographic Hashing
-- GUI Development (JavaFX)
-- Software Design Patterns
-
-## 📄 License
-
-This project is created for educational purposes.
+**Maharashtra Edition** — A comprehensive, production-ready implementation of a secure online voting system using blockchain technology. Built with a robust Java REST API, MongoDB Atlas cloud storage, and a premium cinematic Web UI tailored for Maharashtra state elections.
 
 ---
 
-**Developed for College Project Submission**
-**Blockchain-Based Online Voting System**
+## 📋 Project Overview
+
+This project implements a decentralized-inspired, blockchain-backed voting system that ensures:
+- **One Vote Per Voter**: Guaranteed through strict cryptographic session management and secure MongoDB indexing to prevent duplicate voting.
+- **Immutable Votes (Blockchain)**: Once cast, votes are immediately mined into a local blockchain implementation, locked with SHA-256 and previous-block hash linkages.
+- **Tamper Detection & Ledger Validation**: The administrative command center features real-time validation to verify that no block in the historical chain has been altered.
+- **Transparent, Real-Time Results**: The system autonomously tallies block records to generate exact candidate counts and map demographics.
+
+---
+
+## 🏗️ System Architecture & File Structure
+
+The project follows a robust **layered full-stack architecture** with a clear separation of concerns, evolving from a standard desktop app to a scalable cloud web platform:
+
+```text
+MPJ/
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/votingsystem/
+│       │       ├── api/               # Spark Java REST API server & Routing mappings
+│       │       ├── integration/       # Web3 / RPC integration components
+│       │       ├── model/             # Document Entities: Block, Voter, Election, etc.
+│       │       ├── security/          # BCrypt and SHA-256 Hashing logic
+│       │       ├── service/           # Core business logic & Blockchain rules
+│       │       ├── storage/           # MongoDB Atlas DAO connections
+│       │       ├── ui/                # Legacy JavaFX classes (Desktop Fallback)
+│       │       ├── api/ApiOnlyMain.java # Headless API server entry point
+│       │       └── Main.java          # Legacy JavaFX fallback entry point
+│       └── resources/
+│           └── css/styles.css         # Legacy desktop styles
+├── assets/                            # Images and visual web resources
+├── lib/                               # Third-party required JAR dependencies
+├── out/                               # Compiled Java `.class` files (Desktop build)
+├── screenshots/                       # Directory containing UI & architectural diagrams
+├── target/                            # Maven output directory (Contains fat JAR limit)
+├── .env                               # Environment configurations (MONGO_URI, etc.)
+├── app.js                             # Web Application Frontend Logic & Fetch Calls
+├── build.sh                           # Desktop compilation script
+├── insert_screenshots.py              # Script to auto-generate Final DOCX figures
+├── pom.xml                            # Maven Dependencies & Build configuration
+├── run.sh                             # Shell wrapper execution script
+├── voting_index.html                  # Main Web Application Frontend
+├── styles.css                         # Web Application Styles (Custom Dashboard)
+├── COMPILATION_GUIDE.md               # Advanced build instructions
+├── QUICK_START.md                     # Brief boot execution instructions
+├── VoteChain_Report_Final.docx        # Final Output College Project Documentation
+└── README.md                          # Main Project Documentation File
+```
+
+---
+
+## 🔑 Key Features
+
+### Voter Web Interface
+- 🛡️ **Secure Authentication**: BCrypt-hashed password validation.
+- 🗺️ **Active Constituencies**: District and division mapping ensures voters only vote in their designated areas.
+- ⛓️ **Live Mining Feedback**: The frontend simulates network latency and displays live "mining" success immediately after casting a vote.
+- 📱 **Responsive UI**: Glassmorphism and premium cinematic design styled organically using Vanilla CSS.
+
+### Election Commission Command Center
+- 📊 **Real-Time Analytics**: Division-wise voter turnout, comprehensive candidate tallies, total blocks mined.
+- 🧬 **Blockchain Explorer**: Complete visualization of the internal immutable timeline (from Genesis Block to real-time mined blocks), fetching data directly from MongoDB.
+- 🌱 **Database Seeding**: Single-button tool to seed the initial active DB with Maharashtra geographical data and standard candidate profiles.
+- 🗃️ **Tabular Management**: Dedicated data tables for Constituencies, Live Elections, and Verified Voters.
+
+### Blockchain & Cryptography
+- ⛓️ **Hash Chaining**: Each `Block` object links to the `previousHash`, establishing total historical immutability.
+- 🔐 **SHA-256 Integrity Engine**: Votes are packed as JSON equivalents and put through strict SHA-256 encryption.
+- 🧩 **Proof of Work (Simulated)**: A basic `nonce` iteration process verifies block additions before database commits.
+- 🔑 **BCrypt Integration**: Passwords and keys exist exclusively in encoded forms inside the Mongo database.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Backend**: Core Java 25+, Spark Java (Micro-framework for REST APIs), Maven.
+- **Frontend**: HTML5, Vanilla JavaScript, CSS3 (Custom Glassmorphism styling, no frameworks).
+- **Database**: MongoDB Atlas (Cloud NoSQL), MongoDB Java Driver.
+- **Security**: JBCrypt (Password Hashing), Standard `java.security.MessageDigest` (SHA-256).
+
+---
+
+## 🚀 Quick Start / How to Run
+
+### 1. Prerequisites
+- Java JDK 11 or higher (Tested on Java 25)
+- Maven 3.6+
+- A running MongoDB Atlas Cluster (Free tier is perfectly fine)
+
+### 2. Environment Configuration
+Create a `.env` file in the root project directory `MPJ/` based on these variables:
+```env
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>/?retryWrites=true&w=majority
+AUTO_SEED=true
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin
+```
+
+### 3. Build & Run the Backend
+Open your terminal in the target directory and run:
+
+```bash
+# Compile and build the fat JAR dependency using Maven
+mvn clean package -DskipTests
+
+# Load ENV properties and start the REST Server (Defaults to Port 4567)
+set -a && source .env && set +a
+java -jar target/MPJ-1.0.jar
+```
+
+✅ *When successful, the terminal will log:* `Voting API Server running on port 4567`
+
+### 4. Launch the Web Interface
+Simply open `voting_index.html` in any modern web browser. **Note: the backend must be running for authentication arrays to respond.**
+
+---
+
+## 👨‍💻 Default Login Credentials
+
+### Voter Examples (Auto-Seeded)
+- `V001` / `voter1` (Pune)
+- `V002` / `voter2` (Sambhaji Nagar)
+- `V003` / `voter3` (Nagpur)
+
+### Election Commission Administrator
+- Username: `admin` (Or whatever configured in `.env`)
+- Password: `admin`
+
+---
+
+## 🔐 Cryptographic Implementation Details
+
+### The Vote Structure
+When a vote is cast, a JSON payload creates a Block:
+```json
+{
+  "index": 4,
+  "voterId": "V001",
+  "candidateName": "Hema Salunkhe (BJP)",
+  "timestamp": "2024-04-06T12:00:00",
+  "previousHash": "0007f0234a9b...",
+  "nonce": 34521,
+  "hash": "000a3b194f1c..."
+}
+```
+**Hash Calculation Formula:**  
+`Hash = SHA-256(Index + VoterID + CandidateName + Timestamp + PreviousHash + Nonce)`
+
+---
+
+## 🔍 Educational Value & Viva FAQ
+
+**Q: How does the blockchain ensure vote security in this project?**  
+**A:** Every vote is mathematically sealed in a block spanning the `previousHash`. If a malicious actor alters a record directly in MongoDB, the current `hashCode` will mismatch its origin calculation, and the subsequent block will immediately flag the entire chain as invalid. The Admin Command Center demonstrates this timeline visual validation in real-time.
+
+**Q: Why use MongoDB instead of traditional SQL?**  
+**A:** Since block schemas vary (especially when merging block data payloads vs candidate parameters), a NoSQL approach represents a JSON-to-Document translation seamlessly perfectly mirroring typical modern dApp state logic.
+
+**Q: Is the system decentralized?**  
+**A:** For the scope of this project, it represents a *Consortium* or private ledger style, managed explicitly by the Central State backend. While it runs logically as a blockchain (using proof-of-work loops, SHA hashing, and chain linkage), the raw data lives on an encrypted cloud cluster rather than distributed peer nodes. 
+
+---
+**Developed for Final Year College Project Submission**  
+*Online Voting System utilizing Web-based Interface and Java Backend Architecture*
