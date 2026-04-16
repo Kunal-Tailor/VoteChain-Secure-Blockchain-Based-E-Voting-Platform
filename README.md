@@ -7,6 +7,41 @@ VoteChain is a blockchain-inspired e-voting demo built for a final-year college 
 
 This is an educational prototype, not a production election system.
 
+## Installation
+
+You can run this project in two ways:
+
+- Web UI + API server (recommended): Java 17 + Maven + MongoDB connection string.
+- JavaFX desktop app: Java 17 + JavaFX available on your machine.
+
+### Prerequisites
+
+- Java 17+ (project is configured for Java 17 in `pom.xml`)
+- Maven (for building the API fat JAR)
+
+API/Web mode also needs:
+
+- MongoDB connection string in `MONGO_URI` (Atlas is fine)
+
+Desktop mode also needs:
+
+- JavaFX (if JavaFX modules are missing, follow `COMPILATION_GUIDE.md`)
+
+### Setup
+
+1) Create `.env` from `.env.example` (used by `run.sh` and the API server):
+
+```bash
+cp .env.example .env
+```
+
+2) Put your MongoDB connection string into `.env` as `MONGO_URI`.
+
+Notes:
+
+- `AUTO_SEED=true` will seed demo Maharashtra elections/constituencies if missing.
+- Admin credentials for API/Web mode come from `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
+
 ## What This Project Demonstrates
 
 - One-vote-per-voter enforcement (both modes)
@@ -52,26 +87,20 @@ Prerequisites:
 - Maven
 - A MongoDB connection string (`MONGO_URI`)
 
-1) Create `.env` from `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-2) Build the API fat JAR:
+1) Build the API fat JAR:
 
 ```bash
 mvn clean package -DskipTests
 ```
 
-3) Run the API server (port `4567`):
+2) Run the API server (port `4567`):
 
 ```bash
 set -a && source .env && set +a
 java -jar target/MPJ-1.0.jar
 ```
 
-4) Open the Web UI:
+3) Open the Web UI:
 
 - Open `voting_index.html` in your browser.
 - If your API is not on `http://localhost:4567`, open with `?api=...`, for example:
