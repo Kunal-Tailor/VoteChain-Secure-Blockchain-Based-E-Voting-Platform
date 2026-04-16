@@ -1,171 +1,160 @@
-# VoteChain: Secure Blockchain-Based E-Voting Platform 🗳️
+# VoteChain (MPJ)
 
-**Maharashtra Edition** — A comprehensive, production-ready implementation of a secure online voting system using blockchain technology. Built with a robust Java REST API, MongoDB Atlas cloud storage, and a premium cinematic Web UI tailored for Maharashtra state elections.
+VoteChain is a blockchain-inspired e-voting demo built for a final-year college project. It includes:
 
----
+- A Web UI (`voting_index.html` + `app.js`) that talks to a Java/Spark REST API backed by MongoDB.
+- A JavaFX desktop app that stores votes locally in `blockchain.dat` and voters in `voters.dat`.
 
-## 📋 Project Overview
+This is an educational prototype, not a production election system.
 
-This project implements a decentralized-inspired, blockchain-backed voting system that ensures:
-- **One Vote Per Voter**: Guaranteed through strict cryptographic session management and secure MongoDB indexing to prevent duplicate voting.
-- **Immutable Votes (Blockchain)**: Once cast, votes are immediately mined into a local blockchain implementation, locked with SHA-256 and previous-block hash linkages.
-- **Tamper Detection & Ledger Validation**: The administrative command center features real-time validation to verify that no block in the historical chain has been altered.
-- **Transparent, Real-Time Results**: The system autonomously tallies block records to generate exact candidate counts and map demographics.
+## What This Project Demonstrates
 
----
+- One-vote-per-voter enforcement (both modes)
+- Tamper detection via hash chaining (SHA-256) and proof-of-work style mining (difficulty `3`)
+- Password hashing with BCrypt in the MongoDB-backed API mode
+- RSA digital signatures on vote blocks in the desktop blockchain model
+- An admin dashboard in the Web UI for results and chain validation
 
-## 🏗️ System Architecture & File Structure
+## Tech Stack
 
-The project follows a robust **layered full-stack architecture** with a clear separation of concerns, evolving from a standard desktop app to a scalable cloud web platform:
+- Java 17, Maven
+- Spark Java (REST API)
+- MongoDB (Atlas or any MongoDB connection string)
+- JavaFX (desktop UI)
+- jBCrypt (password hashing)
+
+## Repo Layout (High Level)
 
 ```text
 MPJ/
-├── src/
-│   └── main/
-│       ├── java/
-│       │   └── com/votingsystem/
-│       │       ├── api/               # Spark Java REST API server & Routing mappings
-│       │       ├── integration/       # Web3 / RPC integration components
-│       │       ├── model/             # Document Entities: Block, Voter, Election, etc.
-│       │       ├── security/          # BCrypt and SHA-256 Hashing logic
-│       │       ├── service/           # Core business logic & Blockchain rules
-│       │       ├── storage/           # MongoDB Atlas DAO connections
-│       │       ├── ui/                # Legacy JavaFX classes (Desktop Fallback)
-│       │       ├── api/ApiOnlyMain.java # Headless API server entry point
-│       │       └── Main.java          # Legacy JavaFX fallback entry point
-│       └── resources/
-│           └── css/styles.css         # Legacy desktop styles
-├── assets/                            # Images and visual web resources
-├── lib/                               # Third-party required JAR dependencies
-├── out/                               # Compiled Java `.class` files (Desktop build)
-├── screenshots/                       # Directory containing UI & architectural diagrams
-├── target/                            # Maven output directory (Contains fat JAR limit)
-├── .env                               # Environment configurations (MONGO_URI, etc.)
-├── app.js                             # Web Application Frontend Logic & Fetch Calls
-├── build.sh                           # Desktop compilation script
-├── insert_screenshots.py              # Script to auto-generate Final DOCX figures
-├── pom.xml                            # Maven Dependencies & Build configuration
-├── run.sh                             # Shell wrapper execution script
-├── voting_index.html                  # Main Web Application Frontend
-├── styles.css                         # Web Application Styles (Custom Dashboard)
-├── COMPILATION_GUIDE.md               # Advanced build instructions
-├── QUICK_START.md                     # Brief boot execution instructions
-├── VoteChain_Report_Final.docx        # Final Output College Project Documentation
-└── README.md                          # Main Project Documentation File
+├── src/main/java/com/votingsystem/
+│   ├── api/                 # Spark REST API + MongoDB services
+│   ├── model/               # Block + Blockchain (desktop mode)
+│   ├── security/            # SHA-256 + RSA signature helpers
+│   ├── service/             # Desktop service layer
+│   ├── storage/             # Desktop file persistence (blockchain.dat, voters.dat)
+│   └── ui/                  # JavaFX screens
+├── voting_index.html        # Web UI entry page
+├── app.js                   # Web UI logic (calls the REST API)
+├── styles.css               # Web UI styles
+├── pom.xml                  # Maven build (fat JAR runs API-only main)
+├── Dockerfile               # Container build for API server
+├── build.sh                 # Compile desktop app to ./out
+├── run.sh                   # Run desktop app
+└── screenshots/             # Diagrams and UI screenshots
 ```
 
----
+## Quick Start (Web UI + API Server)
 
-## 🔑 Key Features
+Prerequisites:
 
-### Voter Web Interface
-- 🛡️ **Secure Authentication**: BCrypt-hashed password validation.
-- 🗺️ **Active Constituencies**: District and division mapping ensures voters only vote in their designated areas.
-- ⛓️ **Live Mining Feedback**: The frontend simulates network latency and displays live "mining" success immediately after casting a vote.
-- 📱 **Responsive UI**: Glassmorphism and premium cinematic design styled organically using Vanilla CSS.
+- Java 17+
+- Maven
+- A MongoDB connection string (`MONGO_URI`)
 
-### Election Commission Command Center
-- 📊 **Real-Time Analytics**: Division-wise voter turnout, comprehensive candidate tallies, total blocks mined.
-- 🧬 **Blockchain Explorer**: Complete visualization of the internal immutable timeline (from Genesis Block to real-time mined blocks), fetching data directly from MongoDB.
-- 🌱 **Database Seeding**: Single-button tool to seed the initial active DB with Maharashtra geographical data and standard candidate profiles.
-- 🗃️ **Tabular Management**: Dedicated data tables for Constituencies, Live Elections, and Verified Voters.
-
-### Blockchain & Cryptography
-- ⛓️ **Hash Chaining**: Each `Block` object links to the `previousHash`, establishing total historical immutability.
-- 🔐 **SHA-256 Integrity Engine**: Votes are packed as JSON equivalents and put through strict SHA-256 encryption.
-- 🧩 **Proof of Work (Simulated)**: A basic `nonce` iteration process verifies block additions before database commits.
-- 🔑 **BCrypt Integration**: Passwords and keys exist exclusively in encoded forms inside the Mongo database.
-
----
-
-## 🛠️ Technology Stack
-
-- **Backend**: Core Java 25+, Spark Java (Micro-framework for REST APIs), Maven.
-- **Frontend**: HTML5, Vanilla JavaScript, CSS3 (Custom Glassmorphism styling, no frameworks).
-- **Database**: MongoDB Atlas (Cloud NoSQL), MongoDB Java Driver.
-- **Security**: JBCrypt (Password Hashing), Standard `java.security.MessageDigest` (SHA-256).
-
----
-
-## 🚀 Quick Start / How to Run
-
-### 1. Prerequisites
-- Java JDK 11 or higher (Tested on Java 25)
-- Maven 3.6+
-- A running MongoDB Atlas Cluster (Free tier is perfectly fine)
-
-### 2. Environment Configuration
-Create a `.env` file in the root project directory `MPJ/` based on these variables:
-```env
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>/?retryWrites=true&w=majority
-AUTO_SEED=true
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin
-```
-
-### 3. Build & Run the Backend
-Open your terminal in the target directory and run:
+1) Create `.env` from `.env.example`:
 
 ```bash
-# Compile and build the fat JAR dependency using Maven
-mvn clean package -DskipTests
+cp .env.example .env
+```
 
-# Load ENV properties and start the REST Server (Defaults to Port 4567)
+2) Build the API fat JAR:
+
+```bash
+mvn clean package -DskipTests
+```
+
+3) Run the API server (port `4567`):
+
+```bash
 set -a && source .env && set +a
 java -jar target/MPJ-1.0.jar
 ```
 
-✅ *When successful, the terminal will log:* `Voting API Server running on port 4567`
+4) Open the Web UI:
 
-### 4. Launch the Web Interface
-Simply open `voting_index.html` in any modern web browser. **Note: the backend must be running for authentication arrays to respond.**
+- Open `voting_index.html` in your browser.
+- If your API is not on `http://localhost:4567`, open with `?api=...`, for example:
+  - `voting_index.html?api=http://localhost:4567`
 
----
+### Default Credentials (API/Web Mode)
 
-## 👨‍💻 Default Login Credentials
+- Voters (auto-created in MongoDB): `V001`/`voter1`, `V002`/`voter2`, `V003`/`voter3`, `V004`/`voter4`, `V005`/`voter5`
+- Admin: `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env` (defaults to `admin` / `admin123`)
 
-### Voter Examples (Auto-Seeded)
-- `V001` / `voter1` (Pune)
-- `V002` / `voter2` (Sambhaji Nagar)
-- `V003` / `voter3` (Nagpur)
+## Quick Start (JavaFX Desktop App)
 
-### Election Commission Administrator
-- Username: `admin` (Or whatever configured in `.env`)
-- Password: `admin`
+Prerequisites:
 
----
+- Java 17+
+- JavaFX available on your machine (see `COMPILATION_GUIDE.md` if JavaFX modules are missing)
 
-## 🔐 Cryptographic Implementation Details
+Build and run:
 
-### The Vote Structure
-When a vote is cast, a JSON payload creates a Block:
-```json
-{
-  "index": 4,
-  "voterId": "V001",
-  "candidateName": "Hema Salunkhe (BJP)",
-  "timestamp": "2024-04-06T12:00:00",
-  "previousHash": "0007f0234a9b...",
-  "nonce": 34521,
-  "hash": "000a3b194f1c..."
-}
+```bash
+./build.sh
+./run.sh
 ```
-**Hash Calculation Formula:**  
-`Hash = SHA-256(Index + VoterID + CandidateName + Timestamp + PreviousHash + Nonce)`
 
----
+### Default Credentials (Desktop Mode)
 
-## 🔍 Educational Value & Viva FAQ
+- Voters (stored in `voters.dat`): `V001`/`voter1` ... `V005`/`voter5`
+- Admin (hardcoded in code): `admin` / `admin123`
 
-**Q: How does the blockchain ensure vote security in this project?**  
-**A:** Every vote is mathematically sealed in a block spanning the `previousHash`. If a malicious actor alters a record directly in MongoDB, the current `hashCode` will mismatch its origin calculation, and the subsequent block will immediately flag the entire chain as invalid. The Admin Command Center demonstrates this timeline visual validation in real-time.
+### Desktop Persistence Files
 
-**Q: Why use MongoDB instead of traditional SQL?**  
-**A:** Since block schemas vary (especially when merging block data payloads vs candidate parameters), a NoSQL approach represents a JSON-to-Document translation seamlessly perfectly mirroring typical modern dApp state logic.
+- `blockchain.dat`: serialized blockchain (votes)
+- `voters.dat`: serialized voter credentials
 
-**Q: Is the system decentralized?**  
-**A:** For the scope of this project, it represents a *Consortium* or private ledger style, managed explicitly by the Central State backend. While it runs logically as a blockchain (using proof-of-work loops, SHA hashing, and chain linkage), the raw data lives on an encrypted cloud cluster rather than distributed peer nodes. 
+To reset the desktop demo, delete those two files and re-run.
 
----
-**Developed for Final Year College Project Submission**  
-*Online Voting System utilizing Web-based Interface and Java Backend Architecture*
+## Environment Variables (API Mode)
+
+These are read by `src/main/java/com/votingsystem/api/VotingApiServer.java`:
+
+- `MONGO_URI` (required): MongoDB connection string
+- `AUTO_SEED` (optional, default `false`): set `true` to seed Maharashtra demo elections/constituencies if missing
+- `ADMIN_USERNAME` (optional, default `admin`)
+- `ADMIN_PASSWORD` (optional, default `admin123`)
+
+## API Notes
+
+- Default base URL: `http://localhost:4567`
+- Main routes used by the Web UI include:
+  - `POST /api/voter/login`
+  - `POST /api/voter/cast-vote` and `POST /api/voter/cast-vote-election`
+  - `GET /api/results` (and election/constituency breakdown endpoints)
+  - `POST /api/admin/login`
+  - `GET /api/admin/blockchain`, `GET /api/admin/voters`, `POST /api/admin/seed-maharashtra`
+
+For the full list, see `src/main/java/com/votingsystem/api/VotingApiServer.java`.
+
+## Docker (API Server)
+
+Build:
+
+```bash
+docker build -t votechain-api .
+```
+
+Run (provide `MONGO_URI`):
+
+```bash
+docker run --rm -p 4567:4567 -e MONGO_URI="..." -e AUTO_SEED=true votechain-api
+```
+
+## Screenshots
+
+Some screenshots and diagrams are in `screenshots/`, for example `screenshots/fig01_architecture.png`.
+
+## Troubleshooting
+
+- API fails immediately with "Missing Mongo configuration": set `MONGO_URI` (see `.env.example`)
+- Web UI shows "Server offline": start the API server and ensure it is reachable at `http://localhost:4567` (or pass `?api=...`)
+- JavaFX errors ("module not found: javafx.controls"): follow `COMPILATION_GUIDE.md` for JavaFX setup
+
+## More Docs
+
+- `QUICK_START.md` (fast run steps)
+- `COMPILATION_GUIDE.md` (desktop build + JavaFX troubleshooting)
+- `PROJECT_SUMMARY.md` (component overview)
