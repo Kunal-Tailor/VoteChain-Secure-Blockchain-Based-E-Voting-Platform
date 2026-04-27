@@ -1266,9 +1266,469 @@ public class VotingApiServer {
             }
         });
 
+        // ════════════════════════════════════════════════════════════════
+        //  MLA HUNG ASSEMBLY SIMULATION — SEED 100 VOTERS + 4 MLAs
+        // ════════════════════════════════════════════════════════════════
+        post("/api/mla-sim/seed", (req, res) -> {
+            try {
+                MongoDatabase db = MongoClients.create(MONGO_URI).getDatabase("votingdb");
+                MongoCollection<Document> simVoters = db.getCollection("mla_sim_voters");
+                MongoCollection<Document> simMlas = db.getCollection("mla_sim_mlas");
+                MongoCollection<Document> simCross = db.getCollection("mla_sim_crossvotes");
+
+                simVoters.deleteMany(new Document());
+                simMlas.deleteMany(new Document());
+                simCross.deleteMany(new Document());
+
+                // 4 MLAs with BCrypt hashed passwords
+                String[][] mlas = {
+                    {"1","Rajesh Patil","BJP","Bharatiya Janata Party","rajesh.patil@mla.gov.in","#FF9933","🪷","mla@bjp123"},
+                    {"2","Priya Deshmukh","INC","Indian National Congress","priya.deshmukh@mla.gov.in","#00BFFF","✋","mla@inc123"},
+                    {"3","Suresh Shinde","SHS","Shiv Sena","suresh.shinde@mla.gov.in","#FF6600","🏹","mla@shs123"},
+                    {"4","Meena Jadhav","NCP","Nationalist Congress Party","meena.jadhav@mla.gov.in","#004D40","🕐","mla@ncp123"}
+                };
+                for (String[] m : mlas) {
+                    String mlaHashedPw = org.mindrot.jbcrypt.BCrypt.hashpw(m[7], org.mindrot.jbcrypt.BCrypt.gensalt(12));
+                    simMlas.insertOne(new Document("mlaId", Integer.parseInt(m[0]))
+                        .append("name", m[1]).append("party", m[2]).append("partyFull", m[3])
+                        .append("email", m[4]).append("color", m[5]).append("symbol", m[6])
+                        .append("password", mlaHashedPw));
+                }
+
+                // 100 voters with BCrypt hashed passwords
+                String[] firstNames = {"Aarav","Vivaan","Aditya","Vihaan","Arjun","Sai","Reyansh","Ayaan","Krishna","Ishaan",
+                    "Ananya","Diya","Saanvi","Aanya","Aadhya","Myra","Isha","Sara","Pari","Riya",
+                    "Rahul","Amit","Sunil","Vijay","Rajesh","Pooja","Neha","Priya","Sunita","Kavita",
+                    "Mohan","Deepak","Ramesh","Ganesh","Mahesh","Lakshmi","Gayatri","Savitri","Mangala","Bhavana",
+                    "Nikhil","Rohan","Karan","Varun","Harsh","Sneha","Swati","Mansi","Komal","Pallavi",
+                    "Tushar","Sachin","Ajay","Suresh","Prakash","Seema","Rekha","Meena","Geeta","Suman",
+                    "Akash","Vishal","Sagar","Pranav","Dev","Ashwini","Jyoti","Shruti","Tanvi","Nidhi",
+                    "Omkar","Tejas","Yash","Gaurav","Kunal","Rutuja","Gauri","Sakshi","Aditi","Ankita",
+                    "Manoj","Sandip","Pramod","Nilesh","Dinesh","Vandana","Shubhangi","Madhuri","Archana","Vaishali",
+                    "Amol","Prasad","Sanjay","Ashok","Bharat","Smita","Vrushali","Supriya","Dipali","Ujwala"};
+                String[] lastNames = {"Patil","Deshmukh","Shinde","Jadhav","More","Pawar","Kulkarni","Chavan","Joshi","Bhosale"};
+
+                // Distribution: 28 BJP, 26 INC, 24 SHS, 22 NCP (no 51% majority)
+                int[] dist = {28, 26, 24, 22};
+                int voterIdx = 0;
+                String hashedPw = org.mindrot.jbcrypt.BCrypt.hashpw("vote123", org.mindrot.jbcrypt.BCrypt.gensalt(12));
+
+                for (int mlaIdx = 0; mlaIdx < 4; mlaIdx++) {
+                    for (int j = 0; j < dist[mlaIdx]; j++) {
+                        voterIdx++;
+                        String name = firstNames[voterIdx-1] + " " + lastNames[voterIdx % lastNames.length];
+                        String email = "voter" + voterIdx + "@mh.gov.in";
+                        simVoters.insertOne(new Document("simVoterId", voterIdx)
+                            .append("name", name).append("email", email)
+                            .append("password", hashedPw)
+                            .append("initialVoteMlaId", mlaIdx + 1)
+                            .append("crossVoteMlaId", null)
+                            .append("crossVoteTime", null)
+                            .append("hasCrossVoted", false));
+                    }
+                }
+
+                System.out.println("✅ MLA Simulation seeded: 4 MLAs + 100 voters (BCrypt hashed)");
+                return JsonUtil.obj("success", true, "message",
+                    "MLA Simulation seeded: 4 MLAs, 100 voters, initial votes distributed (28/26/24/22)");
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  MLA SIM — PARTY MERGER (bulk transfer all votes)
+        // ════════════════════════════════════════════════════════════════
+        post("/api/mla-sim/merge", (req, res) -> {
+            try {
+                Map<String, String> body = JsonUtil.parseMap(req.body());
+                String mlaEmail = body.getOrDefault("email", "").trim().toLowerCase();
+                String mlaPassword = body.getOrDefault("password", "").trim();
+                String toMlaIdStr = body.getOrDefault("toMlaId", "").trim();
+
+                if (mlaEmail.isEmpty() || mlaPassword.isEmpty() || toMlaIdStr.isEmpty()) {
+                    res.status(400);
+                    return JsonUtil.error("MLA email, password, and target MLA are required");
+                }
+                int toMlaId = Integer.parseInt(toMlaIdStr);
+
+                MongoDatabase db = MongoClients.create(MONGO_URI).getDatabase("votingdb");
+                MongoCollection<Document> simVoters = db.getCollection("mla_sim_voters");
+                MongoCollection<Document> simMlas = db.getCollection("mla_sim_mlas");
+                MongoCollection<Document> simCross = db.getCollection("mla_sim_crossvotes");
+
+                // Authenticate MLA by email
+                Document fromMla = simMlas.find(new Document("email", mlaEmail)).first();
+                if (fromMla == null) {
+                    res.status(401);
+                    return JsonUtil.error("MLA not found with this email");
+                }
+
+                // Verify MLA password with BCrypt
+                String storedHash = fromMla.getString("password");
+                if (storedHash == null || !org.mindrot.jbcrypt.BCrypt.checkpw(mlaPassword, storedHash)) {
+                    res.status(401);
+                    return JsonUtil.error("Invalid MLA password! Authentication failed.");
+                }
+
+                int fromMlaId = fromMla.getInteger("mlaId");
+                if (fromMlaId == toMlaId) {
+                    res.status(400);
+                    return JsonUtil.error("Cannot merge votes to yourself");
+                }
+
+                Document toMla = simMlas.find(new Document("mlaId", toMlaId)).first();
+                if (toMla == null) {
+                    res.status(404);
+                    return JsonUtil.error("Target MLA not found");
+                }
+
+                // Find all voters whose FINAL vote is still for the fromMla
+                // (initial vote = fromMla AND no cross-vote yet)
+                List<Document> votersToMerge = new java.util.ArrayList<>();
+                simVoters.find(new Document("initialVoteMlaId", fromMlaId)
+                    .append("hasCrossVoted", false)).into(votersToMerge);
+
+                if (votersToMerge.isEmpty()) {
+                    res.status(400);
+                    return JsonUtil.error("No voters left to merge from " + fromMla.getString("name"));
+                }
+
+                String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                    .format(new java.util.Date());
+                int mergedCount = 0;
+
+                for (Document voter : votersToMerge) {
+                    String voterEmail = voter.getString("email");
+
+                    // Mine blockchain block for each merged vote
+                    Document latest = getLatestBlockFromMongo();
+                    int nextIndex = latest != null ? latest.getInteger("index") + 1 : 1;
+                    String previousHash = latest != null ? latest.getString("currentHash") : "0";
+                    String candidateName = "MERGER:" + fromMla.getString("name") + "→"
+                        + toMla.getString("name") + "|" + voter.getString("name");
+
+                    int nonce = 0;
+                    long startTime = System.currentTimeMillis();
+                    String currentHash;
+                    while (true) {
+                        currentHash = sha256(nextIndex + voterEmail + candidateName
+                            + timestamp + previousHash + nonce);
+                        if (currentHash.startsWith(TARGET)) break;
+                        nonce++;
+                    }
+                    long miningTime = System.currentTimeMillis() - startTime;
+
+                    // Save block
+                    blocksCol.insertOne(new Document("index", nextIndex)
+                        .append("voterId", voterEmail).append("candidateName", candidateName)
+                        .append("timestamp", timestamp).append("previousHash", previousHash)
+                        .append("currentHash", currentHash).append("nonce", nonce)
+                        .append("miningTime", miningTime).append("electionId", "MLA-SIM")
+                        .append("constituencyId", "MERGER").append("party", toMla.getString("party")));
+
+                    // Update voter
+                    simVoters.updateOne(new Document("email", voterEmail),
+                        new Document("$set", new Document("crossVoteMlaId", toMlaId)
+                            .append("hasCrossVoted", true)
+                            .append("crossVoteTime", timestamp)));
+
+                    // Log cross-vote
+                    simCross.insertOne(new Document("voterId", voter.getInteger("simVoterId"))
+                        .append("voterName", voter.getString("name")).append("voterEmail", voterEmail)
+                        .append("fromMlaId", fromMlaId).append("fromMlaName", fromMla.getString("name"))
+                        .append("fromParty", fromMla.getString("party"))
+                        .append("toMlaId", toMlaId).append("toMlaName", toMla.getString("name"))
+                        .append("toParty", toMla.getString("party"))
+                        .append("timestamp", timestamp).append("blockHash", currentHash)
+                        .append("blockIndex", nextIndex).append("miningTime", miningTime)
+                        .append("mergerType", "PARTY_MERGER"));
+
+                    mergedCount++;
+                }
+
+                System.out.println("✅ MLA-SIM MERGER: " + fromMla.getString("name") + " → "
+                    + toMla.getString("name") + " (" + mergedCount + " votes transferred)");
+
+                return JsonUtil.obj("success", true,
+                    "fromMla", fromMla.getString("name"), "fromParty", fromMla.getString("party"),
+                    "toMla", toMla.getString("name"), "toParty", toMla.getString("party"),
+                    "mergedVotes", mergedCount, "timestamp", timestamp);
+
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  MLA SIM — GET STATE (MLAs + tally + voters)
+        // ════════════════════════════════════════════════════════════════
+        get("/api/mla-sim/state", (req, res) -> {
+            try {
+                MongoDatabase db = MongoClients.create(MONGO_URI).getDatabase("votingdb");
+                MongoCollection<Document> simVoters = db.getCollection("mla_sim_voters");
+                MongoCollection<Document> simMlas = db.getCollection("mla_sim_mlas");
+
+                // MLAs
+                List<Document> mlaList = new java.util.ArrayList<>();
+                simMlas.find().into(mlaList);
+
+                // Tally (using final vote = crossVote if exists, else initialVote)
+                Map<Integer, Integer> tally = new java.util.LinkedHashMap<>();
+                for (int i = 1; i <= 4; i++) tally.put(i, 0);
+                long totalCross = 0;
+
+                List<Document> voterList = new java.util.ArrayList<>();
+                simVoters.find().into(voterList);
+
+                for (Document v : voterList) {
+                    Integer crossMla = v.getInteger("crossVoteMlaId");
+                    int finalVote = crossMla != null ? crossMla : v.getInteger("initialVoteMlaId");
+                    tally.put(finalVote, tally.getOrDefault(finalVote, 0) + 1);
+                    if (v.getBoolean("hasCrossVoted", false)) totalCross++;
+                }
+
+                boolean majority = tally.values().stream().anyMatch(v -> v >= 51);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"totalVoters\":").append(voterList.size())
+                  .append(",\"totalCrossVotes\":").append(totalCross)
+                  .append(",\"majorityThreshold\":51")
+                  .append(",\"majorityAchieved\":").append(majority)
+                  .append(",\"mlas\":[");
+                for (int i = 0; i < mlaList.size(); i++) {
+                    Document m = mlaList.get(i);
+                    if (i > 0) sb.append(",");
+                    int mlaId = m.getInteger("mlaId");
+                    int votes = tally.getOrDefault(mlaId, 0);
+                    sb.append("{\"mlaId\":").append(mlaId)
+                      .append(",\"name\":\"").append(esc(m.getString("name"))).append("\"")
+                      .append(",\"party\":\"").append(esc(m.getString("party"))).append("\"")
+                      .append(",\"partyFull\":\"").append(esc(m.getString("partyFull"))).append("\"")
+                      .append(",\"email\":\"").append(esc(m.getString("email"))).append("\"")
+                      .append(",\"color\":\"").append(esc(m.getString("color"))).append("\"")
+                      .append(",\"symbol\":\"").append(esc(m.getString("symbol"))).append("\"")
+                      .append(",\"votes\":").append(votes)
+                      .append(",\"percentage\":").append(String.format("%.1f", votes * 100.0 / Math.max(voterList.size(), 1)))
+                      .append("}");
+                }
+                sb.append("],\"tally\":{");
+                boolean first = true;
+                for (Map.Entry<Integer, Integer> e : tally.entrySet()) {
+                    if (!first) sb.append(","); first = false;
+                    sb.append("\"").append(e.getKey()).append("\":").append(e.getValue());
+                }
+                sb.append("}}");
+                return sb.toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  MLA SIM — CROSS-VOTE (email + password auth + blockchain)
+        // ════════════════════════════════════════════════════════════════
+        post("/api/mla-sim/cross-vote", (req, res) -> {
+            try {
+                Map<String, String> body = JsonUtil.parseMap(req.body());
+                String email = body.getOrDefault("email", "").trim().toLowerCase();
+                String password = body.getOrDefault("password", "").trim();
+                String targetMlaIdStr = body.getOrDefault("targetMlaId", "").trim();
+
+                if (email.isEmpty() || password.isEmpty() || targetMlaIdStr.isEmpty()) {
+                    res.status(400);
+                    return JsonUtil.error("Email, password, and targetMlaId are required");
+                }
+                int targetMlaId = Integer.parseInt(targetMlaIdStr);
+
+                MongoDatabase db = MongoClients.create(MONGO_URI).getDatabase("votingdb");
+                MongoCollection<Document> simVoters = db.getCollection("mla_sim_voters");
+                MongoCollection<Document> simMlas = db.getCollection("mla_sim_mlas");
+                MongoCollection<Document> simCross = db.getCollection("mla_sim_crossvotes");
+
+                // Find voter by email
+                Document voter = simVoters.find(new Document("email", email)).first();
+                if (voter == null) {
+                    res.status(401);
+                    return JsonUtil.error("Voter not found. Use voter1@mh.gov.in to voter100@mh.gov.in");
+                }
+
+                // Verify password with BCrypt
+                String storedHash = voter.getString("password");
+                if (!org.mindrot.jbcrypt.BCrypt.checkpw(password, storedHash)) {
+                    res.status(401);
+                    return JsonUtil.error("Invalid password! Authentication failed.");
+                }
+
+                // Check duplicate cross-vote
+                if (voter.getBoolean("hasCrossVoted", false)) {
+                    res.status(400);
+                    return JsonUtil.error("You have already cross-voted. No duplicate votes allowed.");
+                }
+
+                // Check not voting for same MLA
+                int initialMla = voter.getInteger("initialVoteMlaId");
+                if (initialMla == targetMlaId) {
+                    res.status(400);
+                    return JsonUtil.error("You already voted for this MLA initially.");
+                }
+
+                // Get MLA names for the block
+                Document fromMlaDoc = simMlas.find(new Document("mlaId", initialMla)).first();
+                Document toMlaDoc = simMlas.find(new Document("mlaId", targetMlaId)).first();
+                String fromMlaName = fromMlaDoc != null ? fromMlaDoc.getString("name") : "MLA-" + initialMla;
+                String toMlaName = toMlaDoc != null ? toMlaDoc.getString("name") : "MLA-" + targetMlaId;
+                String fromParty = fromMlaDoc != null ? fromMlaDoc.getString("party") : "";
+                String toParty = toMlaDoc != null ? toMlaDoc.getString("party") : "";
+
+                // Mine a blockchain block for this cross-vote
+                Document latest = getLatestBlockFromMongo();
+                int nextIndex = latest != null ? latest.getInteger("index") + 1 : 1;
+                String previousHash = latest != null ? latest.getString("currentHash") : "0";
+                String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
+                String candidateName = "CROSS-VOTE:" + voter.getString("name") + "→" + toMlaName;
+
+                int nonce = 0;
+                long startTime = System.currentTimeMillis();
+                String currentHash;
+                while (true) {
+                    currentHash = sha256(nextIndex + email + candidateName + timestamp + previousHash + nonce);
+                    if (currentHash.startsWith(TARGET)) break;
+                    nonce++;
+                }
+                long miningTime = System.currentTimeMillis() - startTime;
+
+                // Save block to blockchain
+                blocksCol.insertOne(new Document("index", nextIndex)
+                    .append("voterId", email).append("candidateName", candidateName)
+                    .append("timestamp", timestamp).append("previousHash", previousHash)
+                    .append("currentHash", currentHash).append("nonce", nonce)
+                    .append("miningTime", miningTime).append("electionId", "MLA-SIM")
+                    .append("constituencyId", "HUNG-ASSEMBLY").append("party", toParty));
+
+                // Update voter record
+                simVoters.updateOne(new Document("email", email),
+                    new Document("$set", new Document("crossVoteMlaId", targetMlaId)
+                        .append("hasCrossVoted", true)
+                        .append("crossVoteTime", timestamp)));
+
+                // Save cross-vote log
+                simCross.insertOne(new Document("voterId", voter.getInteger("simVoterId"))
+                    .append("voterName", voter.getString("name")).append("voterEmail", email)
+                    .append("fromMlaId", initialMla).append("fromMlaName", fromMlaName).append("fromParty", fromParty)
+                    .append("toMlaId", targetMlaId).append("toMlaName", toMlaName).append("toParty", toParty)
+                    .append("timestamp", timestamp).append("blockHash", currentHash)
+                    .append("blockIndex", nextIndex).append("miningTime", miningTime));
+
+                System.out.println("✅ MLA-SIM Cross-Vote: " + voter.getString("name") + " → " + toMlaName
+                    + " (Block #" + nextIndex + ", " + miningTime + "ms)");
+
+                return JsonUtil.obj("success", true,
+                    "voterName", voter.getString("name"), "voterEmail", email,
+                    "fromMla", fromMlaName, "fromParty", fromParty,
+                    "toMla", toMlaName, "toParty", toParty,
+                    "blockIndex", nextIndex, "blockHash", currentHash,
+                    "miningTime", miningTime, "timestamp", timestamp);
+
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  MLA SIM — AUDIT REPORT (end-to-end voter trail)
+        // ════════════════════════════════════════════════════════════════
+        get("/api/mla-sim/report", (req, res) -> {
+            try {
+                MongoDatabase db = MongoClients.create(MONGO_URI).getDatabase("votingdb");
+                MongoCollection<Document> simVoters = db.getCollection("mla_sim_voters");
+                MongoCollection<Document> simMlas = db.getCollection("mla_sim_mlas");
+                MongoCollection<Document> simCross = db.getCollection("mla_sim_crossvotes");
+
+                // Build MLA lookup
+                Map<Integer, Document> mlaMap = new java.util.LinkedHashMap<>();
+                for (Document m : simMlas.find()) mlaMap.put(m.getInteger("mlaId"), m);
+
+                // Tally
+                Map<Integer, Integer> tally = new java.util.LinkedHashMap<>();
+                for (int i = 1; i <= 4; i++) tally.put(i, 0);
+
+                List<Document> allVoters = new java.util.ArrayList<>();
+                simVoters.find().sort(com.mongodb.client.model.Sorts.ascending("simVoterId")).into(allVoters);
+
+                for (Document v : allVoters) {
+                    Integer crossMla = v.getInteger("crossVoteMlaId");
+                    int finalVote = crossMla != null ? crossMla : v.getInteger("initialVoteMlaId");
+                    tally.put(finalVote, tally.getOrDefault(finalVote, 0) + 1);
+                }
+
+                long crossCount = simCross.countDocuments();
+                boolean majority = tally.values().stream().anyMatch(v -> v >= 51);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"totalVoters\":").append(allVoters.size())
+                  .append(",\"totalCrossVotes\":").append(crossCount)
+                  .append(",\"majorityAchieved\":").append(majority)
+                  .append(",\"tally\":{");
+                boolean first = true;
+                for (Map.Entry<Integer, Integer> e : tally.entrySet()) {
+                    if (!first) sb.append(","); first = false;
+                    Document mla = mlaMap.get(e.getKey());
+                    String name = mla != null ? mla.getString("name") : "MLA-" + e.getKey();
+                    sb.append("\"").append(esc(name)).append("\":").append(e.getValue());
+                }
+                sb.append("},\"voters\":[");
+
+                for (int i = 0; i < allVoters.size(); i++) {
+                    Document v = allVoters.get(i);
+                    if (i > 0) sb.append(",");
+                    int initId = v.getInteger("initialVoteMlaId");
+                    Integer crossId = v.getInteger("crossVoteMlaId");
+                    int finalId = crossId != null ? crossId : initId;
+                    Document initMla = mlaMap.get(initId);
+                    Document crossMla = crossId != null ? mlaMap.get(crossId) : null;
+                    Document finalMla = mlaMap.get(finalId);
+
+                    sb.append("{\"id\":").append(v.getInteger("simVoterId"))
+                      .append(",\"name\":\"").append(esc(v.getString("name"))).append("\"")
+                      .append(",\"email\":\"").append(esc(v.getString("email"))).append("\"")
+                      .append(",\"initialVote\":\"").append(esc(initMla != null ? initMla.getString("name")+" ("+initMla.getString("party")+")" : "")).append("\"")
+                      .append(",\"crossVote\":").append(crossMla != null ? "\""+esc(crossMla.getString("name")+" ("+crossMla.getString("party")+")")+"\"" : "null")
+                      .append(",\"finalVote\":\"").append(esc(finalMla != null ? finalMla.getString("name")+" ("+finalMla.getString("party")+")" : "")).append("\"")
+                      .append(",\"crossVoteTime\":").append(v.getString("crossVoteTime") != null ? "\""+esc(v.getString("crossVoteTime"))+"\"" : "null")
+                      .append(",\"hasCrossVoted\":").append(v.getBoolean("hasCrossVoted", false))
+                      .append("}");
+                }
+                sb.append("],\"crossVoteLog\":[");
+
+                List<Document> logs = new java.util.ArrayList<>();
+                simCross.find().sort(com.mongodb.client.model.Sorts.descending("blockIndex")).into(logs);
+                for (int i = 0; i < logs.size(); i++) {
+                    Document l = logs.get(i);
+                    if (i > 0) sb.append(",");
+                    sb.append("{\"voterName\":\"").append(esc(l.getString("voterName"))).append("\"")
+                      .append(",\"voterEmail\":\"").append(esc(l.getString("voterEmail"))).append("\"")
+                      .append(",\"fromMla\":\"").append(esc(l.getString("fromMlaName"))).append("\"")
+                      .append(",\"fromParty\":\"").append(esc(l.getString("fromParty"))).append("\"")
+                      .append(",\"toMla\":\"").append(esc(l.getString("toMlaName"))).append("\"")
+                      .append(",\"toParty\":\"").append(esc(l.getString("toParty"))).append("\"")
+                      .append(",\"timestamp\":\"").append(esc(l.getString("timestamp"))).append("\"")
+                      .append(",\"blockHash\":\"").append(esc(l.getString("blockHash"))).append("\"")
+                      .append(",\"blockIndex\":").append(l.getInteger("blockIndex"))
+                      .append(",\"miningTime\":").append(toLong(l, "miningTime"))
+                      .append("}");
+                }
+                sb.append("]}");
+                return sb.toString();
+            } catch (Exception e) {
+                res.status(500); return JsonUtil.error(e.getMessage());
+            }
+        });
+
         System.out.println("✅ Voting API Server started — Maharashtra Edition (MongoDB-only)");
         System.out.println("   All data lives in MongoDB Atlas. No local files used.");
         System.out.println("   Call POST /api/admin/seed-maharashtra to load all constituency data.");
+        System.out.println("   MLA Hung Assembly Simulation endpoints ready (/api/mla-sim/*)");
     }
 
     // ════════════════════════════════════════════════════════════════

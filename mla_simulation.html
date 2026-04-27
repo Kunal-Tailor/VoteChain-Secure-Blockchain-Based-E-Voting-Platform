@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MLA Hung Assembly Simulation — VoteChain</title>
+  <meta name="description" content="Hung Assembly simulation with cross-voting, password verification, and end-to-end audit report"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    /* MLA Simulation specific styles */
+    .sim-container{max-width:1100px;margin:0 auto;padding:24px 16px;position:relative;z-index:1}
+    .sim-header{text-align:center;margin-bottom:28px}
+    .sim-header .page-title{font-size:2.2rem}
+    .phase-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:20px;font-size:.82rem;font-weight:700;margin-bottom:16px}
+    .phase-1{background:rgba(255,153,51,0.12);border:1px solid rgba(255,153,51,0.4);color:#FF9933}
+    .phase-2{background:rgba(33,150,243,0.12);border:1px solid rgba(33,150,243,0.4);color:#2196F3}
+    .phase-3{background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.4);color:#00e676}
+    .hung-banner{background:linear-gradient(135deg,rgba(255,82,82,0.15),rgba(255,153,51,0.15));border:2px solid rgba(255,82,82,0.5);border-radius:16px;padding:24px;text-align:center;margin:20px 0;animation:pulse 2s infinite}
+    .hung-banner h2{font-family:'Cinzel',serif;font-size:1.8rem;color:#ff5252;margin-bottom:6px}
+    .hung-banner p{color:var(--muted);font-size:.88rem}
+    .mla-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .mla-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:20px;text-align:center;transition:.3s;position:relative;overflow:hidden}
+    .mla-card:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.4)}
+    .mla-card.leading{border-color:rgba(255,215,0,0.6);box-shadow:0 0 20px rgba(255,215,0,0.15)}
+    .mla-avatar{width:70px;height:70px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;border:3px solid rgba(255,255,255,0.15)}
+    .mla-name{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:2px}
+    .mla-party{font-size:.75rem;font-weight:600;margin-bottom:8px}
+    .mla-email{font-size:.65rem;color:var(--muted);margin-bottom:10px;font-family:'JetBrains Mono',monospace}
+    .mla-votes{font-size:2.2rem;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1}
+    .mla-pct{font-size:.78rem;color:var(--muted);margin-top:4px}
+    .mla-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.06);margin-top:10px;overflow:hidden}
+    .mla-bar-inner{height:100%;border-radius:3px;transition:width .8s ease}
+    .majority-line{position:relative;margin:8px 0 0;font-size:.6rem;color:rgba(255,82,82,0.7);text-align:right}
+    .cv-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:24px}
+    .cv-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .cv-form{display:flex;flex-direction:column;gap:14px}
+    .cv-mla-select{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .cv-mla-opt{padding:12px;border-radius:10px;border:2px solid var(--border2);background:rgba(255,255,255,0.02);cursor:pointer;transition:.2s;text-align:center}
+    .cv-mla-opt:hover{border-color:rgba(255,153,51,0.4);background:rgba(255,153,51,0.05)}
+    .cv-mla-opt.selected{border-color:var(--saffron);background:rgba(255,153,51,0.12)}
+    .cv-mla-opt .opt-name{font-size:.82rem;font-weight:700;color:var(--text)}
+    .cv-mla-opt .opt-party{font-size:.68rem;margin-top:2px}
+    .cv-log{max-height:300px;overflow-y:auto;padding-right:4px}
+    .cv-log::-webkit-scrollbar{width:3px}.cv-log::-webkit-scrollbar-thumb{background:rgba(255,153,51,0.3);border-radius:2px}
+    .log-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;border:1px solid var(--border2);margin-bottom:6px;font-size:.78rem;animation:fadeUp .3s ease}
+    .log-item .log-icon{font-size:1.1rem;flex-shrink:0}
+    .log-item .log-text{flex:1;color:var(--text);line-height:1.4}
+    .log-item .log-time{font-size:.65rem;color:var(--muted);flex-shrink:0;font-family:'JetBrains Mono',monospace}
+    .report-table{width:100%;border-collapse:collapse;font-size:.78rem}
+    .report-table th{text-align:left;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2)}
+    .report-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+    .report-table tr:hover td{background:rgba(255,153,51,0.03)}
+    .report-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:24px}
+    .majority-marker{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:.68rem;font-weight:700}
+    .marker-won{background:rgba(0,230,118,0.12);color:#00e676}
+    .marker-hung{background:rgba(255,82,82,0.12);color:#ff5252}
+    .sim-controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:20px 0}
+    .timeline-bar{display:flex;align-items:center;gap:0;margin:20px 0}
+    .tl-step{flex:1;text-align:center;padding:10px 6px;font-size:.72rem;font-weight:600;border-bottom:3px solid var(--border2);color:var(--muted);transition:.3s}
+    .tl-step.active{border-bottom-color:var(--saffron);color:var(--saffron)}
+    .tl-step.done{border-bottom-color:#00e676;color:#00e676}
+    .merger-section{background:var(--card);border:2px solid rgba(255,215,0,0.3);border-radius:16px;padding:28px;margin-bottom:24px;position:relative;overflow:hidden}
+    .merger-section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FF9933,#FFD700,#00e676)}
+    .merger-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin:20px 0}
+    .merger-mla-card{background:rgba(255,255,255,0.03);border:2px solid var(--border2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:.3s}
+    .merger-mla-card:hover{border-color:rgba(255,215,0,0.4);transform:scale(1.02)}
+    .merger-mla-card.selected{border-color:#FFD700;background:rgba(255,215,0,0.08);box-shadow:0 0 20px rgba(255,215,0,0.1)}
+    .merger-arrow{font-size:2.5rem;color:#FFD700;text-align:center;animation:pulse 1.5s infinite}
+    .merger-result{background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.3);border-radius:12px;padding:20px;text-align:center;margin-top:16px;display:none}
+    @media(max-width:768px){.mla-grid{grid-template-columns:1fr 1fr}.cv-grid{grid-template-columns:1fr}.cv-mla-select{grid-template-columns:1fr}.merger-grid{grid-template-columns:1fr;gap:10px}}
+    @media(max-width:480px){.mla-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <div class="tribar"><span></span><span></span><span></span></div>MLA Hung Assembly Simulation
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="nav-pill" id="simStatus">Phase 1: Initial Voting</span>
+      <a href="voting_index.html" class="nav-logout" style="text-decoration:none">← Back to Main</a>
+    </div>
+  </nav>
+
+  <div class="sim-container">
+    <!-- HEADER -->
+    <div class="sim-header anim">
+      <div class="phase-badge phase-1" id="phaseBadge">📊 Phase 1 — Initial Vote Distribution</div>
+      <h1 class="page-title">MLA Hung Assembly Simulation</h1>
+      <p class="page-sub">4 MLAs · 100 Voters · 51% Majority Required · Cross-Voting with Password Auth · End-to-End Audit</p>
+      <div class="triband"><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="timeline-bar anim2" id="timeline">
+      <div class="tl-step active" id="tl-1">① Initial Voting</div>
+      <div class="tl-step" id="tl-2">② Hung Assembly</div>
+      <div class="tl-step" id="tl-3">③ Party Merger</div>
+      <div class="tl-step" id="tl-4">④ Cross-Voting</div>
+      <div class="tl-step" id="tl-5">⑤ Final Result</div>
+      <div class="tl-step" id="tl-6">⑥ Audit Report</div>
+    </div>
+
+    <!-- MLA CARDS -->
+    <div class="section-label anim2">MLA Candidates — Vote Tally</div>
+    <div class="mla-grid anim2" id="mlaGrid"></div>
+
+    <!-- HUNG ASSEMBLY BANNER (hidden initially) -->
+    <div id="hungBanner" style="display:none"></div>
+
+    <!-- CONTROLS -->
+    <div class="sim-controls anim3" id="simControls">
+      <button class="btn btn-primary btn-inline" id="btnStartSim" onclick="startSimulation()">▶️ Start Initial Voting Simulation</button>
+      <button class="btn btn-secondary btn-inline" id="btnReset" onclick="resetSimulation()">🔄 Reset</button>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-grid anim3" id="chartsArea">
+      <div class="chart-box"><div class="chart-title">Vote Distribution</div><canvas id="simPie" height="220"></canvas></div>
+      <div class="chart-box"><div class="chart-title">MLA-wise Comparison</div><canvas id="simBar" height="220"></canvas></div>
+    </div>
+
+    <!-- PARTY MERGER SECTION (hidden initially) -->
+    <div class="merger-section" id="mergerSection" style="display:none">
+      <div class="section-label">🤝 Party Merger — MLA Authenticates & Transfers All Votes</div>
+      <p class="page-sub" style="margin-bottom:16px">The MLA logs in with their <strong>email & password</strong> to authorize merging <strong>all their voters</strong> to another MLA.</p>
+      <div class="alert alert-error" id="merge-err"></div>
+      <div class="alert alert-success" id="merge-ok"></div>
+      <div class="cv-grid">
+        <div>
+          <div class="cv-form">
+            <div class="form-group">
+              <label class="form-label">📧 MLA Email (who is merging)</label>
+              <input class="form-input" id="merge-email" placeholder="e.g. meena.jadhav@mla.gov.in" onkeydown="if(event.key==='Enter')document.getElementById('merge-pw').focus()"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🔒 MLA Password</label>
+              <input class="form-input" id="merge-pw" type="password" placeholder="Enter MLA password" onkeydown="if(event.key==='Enter')executeMerger()"/>
+            </div>
+            <div style="margin-top:4px;padding:10px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:10px;font-size:.72rem;color:var(--muted)">
+              <strong style="color:#FFD700">MLA Credentials:</strong><br/>
+              rajesh.patil@mla.gov.in / <code>mla@bjp123</code><br/>
+              priya.deshmukh@mla.gov.in / <code>mla@inc123</code><br/>
+              suresh.shinde@mla.gov.in / <code>mla@shs123</code><br/>
+              meena.jadhav@mla.gov.in / <code>mla@ncp123</code>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="section-label" style="margin-bottom:8px;font-size:.72rem">🏛️ MERGE ALL VOTES TO — Select Target MLA</div>
+          <div id="mergerToList"></div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn btn-primary btn-inline" onclick="executeMerger()" id="btnMerge">🤝 Execute Party Merger</button>
+      </div>
+      <div class="merger-result" id="mergerResult"></div>
+      <div style="margin-top:16px;text-align:center">
+        <button class="btn btn-secondary btn-inline" onclick="skipToIndividualCrossVoting()" style="font-size:.78rem">Skip to Individual Cross-Voting →</button>
+      </div>
+    </div>
+
+    <!-- CROSS-VOTING SECTION (hidden initially) -->
+    <div class="cv-section" id="crossVoteSection" style="display:none">
+      <div class="section-label">🗳️ Cross-Voting Portal — Authenticate & Transfer Vote</div>
+      <p class="page-sub" style="margin-bottom:16px">No MLA achieved 51% majority. Voters can now cross-vote by logging in with their <strong>email & password</strong>.</p>
+      <div class="cv-grid">
+        <div>
+          <div class="cv-form">
+            <div class="alert alert-error" id="cv-err"></div>
+            <div class="alert alert-success" id="cv-ok"></div>
+            <div class="form-group">
+              <label class="form-label">📧 Voter Email</label>
+              <input class="form-input" id="cv-email" placeholder="e.g. voter1@mh.gov.in" onkeydown="if(event.key==='Enter')document.getElementById('cv-pw').focus()"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🔒 Password</label>
+              <input class="form-input" id="cv-pw" type="password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')submitCrossVote()"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🏛️ Give Your Vote To</label>
+              <div class="cv-mla-select" id="cvMlaSelect"></div>
+            </div>
+            <button class="btn btn-green" onclick="submitCrossVote()">✅ Submit Cross-Vote</button>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:rgba(255,153,51,0.06);border:1px solid rgba(255,153,51,0.2);border-radius:10px;font-size:.72rem;color:var(--muted)">
+            <strong style="color:var(--saffron)">Demo Credentials:</strong> voter1@mh.gov.in to voter100@mh.gov.in / password: <code>vote123</code>
+          </div>
+        </div>
+        <div>
+          <div class="section-label" style="margin-bottom:10px">📋 Live Cross-Vote Log</div>
+          <div class="cv-log" id="cvLog">
+            <div style="text-align:center;color:var(--muted);padding:30px;font-size:.82rem">No cross-votes yet. Be the first to vote!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT REPORT (hidden initially) -->
+    <div class="report-section" id="reportSection" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+        <div>
+          <div class="section-label" style="margin-bottom:4px">📊 End-to-End Audit Report</div>
+          <p style="font-size:.78rem;color:var(--muted)">Complete voter trail — who voted for whom, cross-votes, timestamps</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-inline" onclick="exportReport()" style="padding:8px 16px;font-size:.78rem">📥 Export Report</button>
+          <button class="btn btn-secondary btn-inline" onclick="window.print()" style="padding:8px 16px;font-size:.78rem">🖨️ Print</button>
+        </div>
+      </div>
+      <!-- Report Summary -->
+      <div id="reportSummary" style="margin-bottom:20px"></div>
+      <!-- Report Table -->
+      <div style="overflow-x:auto">
+        <table class="report-table" id="reportTable">
+          <thead>
+            <tr>
+              <th>#</th><th>Voter Name</th><th>Email</th><th>Initial Vote</th><th>Cross-Vote To</th><th>Final Vote</th><th>Cross-Vote Time</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="mla_simulation.js"></script>
+</body>
+</html>
